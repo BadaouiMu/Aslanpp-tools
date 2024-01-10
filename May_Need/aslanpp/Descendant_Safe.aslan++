@@ -1,0 +1,63 @@
+% @ofmc(NO)
+% Test specification for descendant closure.
+% Expected outcome: SAFE, but OFMC limitation
+
+specification Descendant_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		gf, f, c, gf_other, f_other, c_other : agent;
+		tagged(text, text) : fact;
+		owner(agent, text) : fact;
+
+	entity Grandfather(Actor, Father, Child : agent) 
+	{
+		symbols
+			GF_M : text;
+
+		entity Father(Actor, Child : agent)
+		{
+			symbols
+				F_M : text;
+
+			entity Child(Actor : agent)
+			{
+				symbols
+					C_M : text;
+
+				body
+				{
+					C_M := fresh();
+					owner(Actor, C_M);
+					tagged(GF_M, C_M);
+					tagged(F_M, C_M);
+				}
+			}
+
+			body
+			{
+				F_M := fresh();
+				owner(Actor, F_M);
+				new Child(Child);
+			}
+		}
+
+		body
+		{
+			GF_M := fresh();
+			owner(Actor, GF_M);
+			new Father(Father, Child);
+		}
+	}
+
+	body
+	{
+		new Grandfather(gf_other, f_other, c_other);
+		new Grandfather(gf, f, c);
+	}
+
+	goals
+		g : [](!exists M1 M2 M3 . (owner(gf_other, M1) & tagged(M1, M3) & owner(f, M2) & tagged(M2, M3) & owner(c, M3)));
+}

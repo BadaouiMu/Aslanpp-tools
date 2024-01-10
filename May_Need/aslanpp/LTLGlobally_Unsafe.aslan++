@@ -1,0 +1,22 @@
+% TESTED FEATURES: LTL goals
+% EXPECTED OUTCOME: Unsafe
+specification LTLGlobally_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		prop, tick1, tick2, tick3 : fact;
+
+	breakpoints { prop, tick1, tick2, tick3 }
+        body {
+		prop;
+		tick1;
+		tick2;
+		retract prop;
+		tick3;
+	}
+
+	goals
+		g : [](tick1 => prop);
+}

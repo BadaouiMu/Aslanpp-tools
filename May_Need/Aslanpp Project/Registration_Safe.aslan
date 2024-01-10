@@ -1,0 +1,1656 @@
+% @specification(Registration_Safe)
+% @channel_model(CCM)
+% @connector_name(ASLan++ Connector)
+% @connector_version(1.4.9)
+% @connector_options(-opt LUMP -hc ALL -gas)
+
+section signature:
+
+	text > slabel
+	ak : agent -> public_key
+	check_exsit_id_pw_DB : agent * message -> fact
+	child : nat * nat -> fact
+	choose_anathor_password : agent -> message
+	choose_password : agent -> message
+	ck : agent -> public_key
+	create_tid : agent * message * message -> message
+	defaultPseudonym : agent * nat -> public_key
+	dishonest : agent -> fact
+	% @original_name(name=recupere_N2)
+	e_A_B_recupere_N2 : agent * message -> message
+	% @original_name(name=x5_in_DB)
+	e_A_G_x5_in_DB : agent * message -> fact
+	% @original_name(name=store_V1)
+	e_CPWwRA_A_store_V1 : message -> fact
+	% @original_name(name=store_V3)
+	e_CPWwRA_B_store_V3 : agent * message -> fact
+	exist_tid_DB : agent * message -> fact
+	generate_localion : agent -> message
+	hash_functionn : message -> message
+	inf_LDmax : agent * message * message * message * message -> fact
+	is_it_GID_SIDj : message -> fact
+	pk : agent -> public_key
+	random_N5_from_DB : agent * agent -> message
+	rcvd : agent * agent * message * channel -> fact
+	recupere_N1 : agent * message -> message
+	recupere_N2 : agent * message -> message
+	recupere_N3 : agent * message -> message
+	redo_Authentification : agent * agent * agent -> fact
+	search_tid_DB : agent * message -> message
+	secret_ID_set : nat -> set(agent)
+	secret_Kgr_set : nat -> set(agent)
+	secret_Ksr_set : nat -> set(agent)
+	secret_Kur_set : nat -> set(agent)
+	secret_Lc_set : nat -> set(agent)
+	secret_N1_set : nat -> set(agent)
+	secret_N2_set : nat -> set(agent)
+	secret_N3_set : nat -> set(agent)
+	secret_N5_set : nat -> set(agent)
+	secret_PW_set : nat -> set(agent)
+	secret_TIDUi_set : nat -> set(agent)
+	secret_X5_set : nat -> set(agent)
+	select_id : agent -> message
+	sent : agent * agent * agent * message * channel -> fact
+	state_Alice : agent * nat * nat * agent * agent * agent * message * message * message * message * symmetric_key -> fact
+	state_Authentification : agent * nat * nat * agent * agent * agent -> fact
+	state_Bob : agent * nat * nat * agent * message * symmetric_key -> fact
+	state_ChangePW_without_RA : agent * nat * nat * agent * agent * agent -> fact
+	state_E_A_Alice : agent * nat * nat * agent * agent * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message -> fact
+	state_E_A_Bob : agent * nat * nat * agent * agent * message * message * message * message * message * message * message * message * message * message -> fact
+	state_E_CPWwRA_Alice : agent * nat * nat * agent * agent * message * message * message * message * message * message * message * message * symmetric_key -> fact
+	state_E_CPWwRA_Bob : agent * nat * nat * agent * message * symmetric_key -> fact
+	state_E_CPWwRA_GWN : agent * nat * nat * agent * message * message * message * symmetric_key -> fact
+	state_Environment : agent * nat * nat * agent * agent * agent * agent -> fact
+	state_GWN : agent * nat * nat * agent * agent * agent * message * message * message * symmetric_key -> fact
+	state_Gateway : agent * nat * nat * agent * agent * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message * message -> fact
+	state_RA : agent * nat * nat * agent * agent * agent * message * message * message * message * message * message * message * symmetric_key * symmetric_key * symmetric_key -> fact
+	state_Registration : agent * nat * nat * agent * agent * agent * agent -> fact
+	store_Lc_DB : agent * message -> fact
+	store_Sk : agent * message -> fact
+	store_V1 : agent * message -> fact
+	store_V3 : agent * message -> fact
+	store_tid : agent * message -> fact
+	store_tid_V2_V3 : agent * message * message * message -> fact
+	succ : nat -> nat
+	tid_exist_DB : agent * message -> fact
+	update_tid : agent * message * message * message -> fact
+	update_tid_V2_V3 : agent * message * message * message -> fact
+	x5_in_DB : agent * message -> message
+	xor_functionn : message * message -> message
+
+section types:
+
+	A : agent
+	Actor : agent
+	Ak_arg_1 : agent
+	B : agent
+	C : message
+	Choose_anathor_password_arg_1 : agent
+	Ck_arg_1 : agent
+	DIDui : message
+	Dummy : agent
+	Dummy_1 : agent
+	Dummy_2 : agent
+	Dummy_3 : agent
+	Dummy_4 : agent
+	Dummy_5 : agent
+	Dummy_6 : agent
+	% @original_name(name=A)
+	E_A_A : agent
+	% @original_name(name=Actor)
+	E_A_A_Actor : agent
+	% @original_name(name=B)
+	E_A_A_B : agent
+	% @original_name(name=GID)
+	E_A_A_GID : message
+	% @original_name(name=GWN)
+	E_A_A_GWN : agent
+	% @original_name(name=IID)
+	E_A_A_IID : nat
+	% @original_name(name=SL)
+	E_A_A_SL : nat
+	% @original_name(name=TIDUi)
+	E_A_A_TIDUi : message
+	% @original_name(name=V2)
+	E_A_A_V2 : message
+	% @original_name(name=Actor)
+	E_A_Actor : agent
+	% @original_name(name=B)
+	E_A_B : agent
+	% @original_name(name=A)
+	E_A_B_A : agent
+	% @original_name(name=Actor)
+	E_A_B_Actor : agent
+	% @original_name(name=GS)
+	E_A_B_GS : message
+	% @original_name(name=GS; match=true)
+	E_A_B_GS_1 : message
+	% @original_name(name=GWN)
+	E_A_B_GWN : agent
+	% @original_name(name=HGS)
+	E_A_B_HGS : message
+	% @original_name(name=HGS; match=true)
+	E_A_B_HGS_1 : message
+	% @original_name(name=HSG)
+	E_A_B_HSG : message
+	% @original_name(name=IID)
+	E_A_B_IID : nat
+	% @original_name(name=N1)
+	E_A_B_N1 : message
+	% @original_name(name=N2)
+	E_A_B_N2 : message
+	% @original_name(name=N3)
+	E_A_B_N3 : message
+	% @original_name(name=N3; fresh=true)
+	E_A_B_N3_1 : message
+	% @original_name(name=SG)
+	E_A_B_SG : message
+	% @original_name(name=SIDj)
+	E_A_B_SIDj : message
+	% @original_name(name=SL)
+	E_A_B_SL : nat
+	% @original_name(name=Sk)
+	E_A_B_Sk : message
+	% @original_name(name=V3)
+	E_A_B_V3 : message
+	% @original_name(name=GWN)
+	E_A_GWN : agent
+	% @original_name(name=A)
+	E_A_G_A : agent
+	% @original_name(name=Actor)
+	E_A_G_Actor : agent
+	% @original_name(name=B)
+	E_A_G_B : agent
+	% @original_name(name=DIDui)
+	E_A_G_DIDui : message
+	% @original_name(name=DIDui; match=true)
+	E_A_G_DIDui_1 : message
+	% @original_name(name=GID)
+	E_A_G_GID : message
+	% @original_name(name=HUG)
+	E_A_G_HUG : message
+	% @original_name(name=HUG; match=true)
+	E_A_G_HUG_1 : message
+	% @original_name(name=IID)
+	E_A_G_IID : nat
+	% @original_name(name=Lc)
+	E_A_G_Lc : message
+	% @original_name(name=N1)
+	E_A_G_N1 : message
+	% @original_name(name=N2)
+	E_A_G_N2 : message
+	% @original_name(name=N2; fresh=true)
+	E_A_G_N2_1 : message
+	% @original_name(name=N3)
+	E_A_G_N3 : message
+	% @original_name(name=N5)
+	E_A_G_N5 : message
+	% @original_name(name=R)
+	E_A_G_R : message
+	% @original_name(name=RHMAC)
+	E_A_G_RHMAC : message
+	% @original_name(name=RHMAC; match=true)
+	E_A_G_RHMAC_1 : message
+	% @original_name(name=R; match=true)
+	E_A_G_R_1 : message
+	% @original_name(name=SIDj)
+	E_A_G_SIDj : message
+	% @original_name(name=SL)
+	E_A_G_SL : nat
+	% @original_name(name=Sk)
+	E_A_G_Sk : message
+	% @original_name(name=UG)
+	E_A_G_UG : message
+	% @original_name(name=UG; match=true)
+	E_A_G_UG_1 : message
+	% @original_name(name=V2)
+	E_A_G_V2 : message
+	% @original_name(name=V3)
+	E_A_G_V3 : message
+	% @original_name(name=X5)
+	E_A_G_X5 : message
+	% @original_name(name=IID)
+	E_A_IID : nat
+	% @original_name(name=SL)
+	E_A_SL : nat
+	% @original_name(name=A)
+	E_CPWwRA_A : agent
+	% @original_name(name=Actor)
+	E_CPWwRA_A_Actor : agent
+	% @original_name(name=B)
+	E_CPWwRA_A_B : agent
+	% @original_name(name=GID)
+	E_CPWwRA_A_GID : message
+	% @original_name(name=GWN)
+	E_CPWwRA_A_GWN : agent
+	% @original_name(name=IDUi)
+	E_CPWwRA_A_IDUi : message
+	% @original_name(name=IID)
+	E_CPWwRA_A_IID : nat
+	% @original_name(name=PWi)
+	E_CPWwRA_A_PWi : message
+	% @original_name(name=SIDj)
+	E_CPWwRA_A_SIDj : message
+	% @original_name(name=SL)
+	E_CPWwRA_A_SL : nat
+	% @original_name(name=Sk)
+	E_CPWwRA_A_Sk : symmetric_key
+	% @original_name(name=TIDUi)
+	E_CPWwRA_A_TIDUi : message
+	% @original_name(name=V1)
+	E_CPWwRA_A_V1 : message
+	% @original_name(name=V2)
+	E_CPWwRA_A_V2 : message
+	% @original_name(name=V3)
+	E_CPWwRA_A_V3 : message
+	% @original_name(name=Actor)
+	E_CPWwRA_Actor : agent
+	% @original_name(name=B)
+	E_CPWwRA_B : agent
+	% @original_name(name=A)
+	E_CPWwRA_B_A : agent
+	% @original_name(name=Actor)
+	E_CPWwRA_B_Actor : agent
+	% @original_name(name=IID)
+	E_CPWwRA_B_IID : nat
+	% @original_name(name=SL)
+	E_CPWwRA_B_SL : nat
+	% @original_name(name=Sk)
+	E_CPWwRA_B_Sk : symmetric_key
+	% @original_name(name=V3)
+	E_CPWwRA_B_V3 : message
+	% @original_name(name=V3; match=true)
+	E_CPWwRA_B_V3_1 : message
+	% @original_name(name=GWN)
+	E_CPWwRA_GWN : agent
+	% @original_name(name=A)
+	E_CPWwRA_GWN_A : agent
+	% @original_name(name=Actor)
+	E_CPWwRA_GWN_Actor : agent
+	% @original_name(name=IID)
+	E_CPWwRA_GWN_IID : nat
+	% @original_name(name=SL)
+	E_CPWwRA_GWN_SL : nat
+	% @original_name(name=Sk)
+	E_CPWwRA_GWN_Sk : symmetric_key
+	% @original_name(name=TIDUi)
+	E_CPWwRA_GWN_TIDUi : message
+	% @original_name(name=TIDUi; match=true)
+	E_CPWwRA_GWN_TIDUi_1 : message
+	% @original_name(name=V2)
+	E_CPWwRA_GWN_V2 : message
+	% @original_name(name=V2; match=true)
+	E_CPWwRA_GWN_V2_1 : message
+	% @original_name(name=V3)
+	E_CPWwRA_GWN_V3 : message
+	% @original_name(name=V3; match=true)
+	E_CPWwRA_GWN_V3_1 : message
+	% @original_name(name=IID)
+	E_CPWwRA_IID : nat
+	% @original_name(name=SL)
+	E_CPWwRA_SL : nat
+	% @original_name(name=A)
+	E_R_A : agent
+	% @original_name(name=Actor)
+	E_R_A_Actor : agent
+	% @original_name(name=B)
+	E_R_A_B : agent
+	% @original_name(name=GWN)
+	E_R_A_GWN : agent
+	% @original_name(name=IID)
+	E_R_A_IID : nat
+	% @original_name(name=RA)
+	E_R_A_RA : agent
+	% @original_name(name=SL)
+	E_R_A_SL : nat
+	% @original_name(name=Actor)
+	E_R_Actor : agent
+	% @original_name(name=B)
+	E_R_B : agent
+	% @original_name(name=Actor)
+	E_R_B_Actor : agent
+	% @original_name(name=IID)
+	E_R_B_IID : nat
+	% @original_name(name=Ksr)
+	E_R_B_Ksr : symmetric_key
+	% @original_name(name=RA)
+	E_R_B_RA : agent
+	% @original_name(name=SL)
+	E_R_B_SL : nat
+	% @original_name(name=V3)
+	E_R_B_V3 : message
+	% @original_name(name=V3; match=true)
+	E_R_B_V3_1 : message
+	% @original_name(name=GWN)
+	E_R_GWN : agent
+	% @original_name(name=A)
+	E_R_GWN_A : agent
+	% @original_name(name=Actor)
+	E_R_GWN_Actor : agent
+	% @original_name(name=B)
+	E_R_GWN_B : agent
+	% @original_name(name=IID)
+	E_R_GWN_IID : nat
+	% @original_name(name=Kgr)
+	E_R_GWN_Kgr : symmetric_key
+	% @original_name(name=RA)
+	E_R_GWN_RA : agent
+	% @original_name(name=SL)
+	E_R_GWN_SL : nat
+	% @original_name(name=TIDUi)
+	E_R_GWN_TIDUi : message
+	% @original_name(name=TIDUi; match=true)
+	E_R_GWN_TIDUi_1 : message
+	% @original_name(name=V2)
+	E_R_GWN_V2 : message
+	% @original_name(name=V2; match=true)
+	E_R_GWN_V2_1 : message
+	% @original_name(name=V3)
+	E_R_GWN_V3 : message
+	% @original_name(name=V3; match=true)
+	E_R_GWN_V3_1 : message
+	% @original_name(name=IID)
+	E_R_IID : nat
+	% @original_name(name=RA)
+	E_R_RA : agent
+	% @original_name(name=A)
+	E_R_RA_A : agent
+	% @original_name(name=Actor)
+	E_R_RA_Actor : agent
+	% @original_name(name=B)
+	E_R_RA_B : agent
+	% @original_name(name=GWN)
+	E_R_RA_GWN : agent
+	% @original_name(name=IDUi)
+	E_R_RA_IDUi : message
+	% @original_name(name=IDUi; match=true)
+	E_R_RA_IDUi_1 : message
+	% @original_name(name=IID)
+	E_R_RA_IID : nat
+	% @original_name(name=Kur)
+	E_R_RA_Kur : symmetric_key
+	% @original_name(name=PWi)
+	E_R_RA_PWi : message
+	% @original_name(name=PWi; match=true)
+	E_R_RA_PWi_1 : message
+	% @original_name(name=SL)
+	E_R_RA_SL : nat
+	% @original_name(name=TIDUi)
+	E_R_RA_TIDUi : message
+	% @original_name(name=SL)
+	E_R_SL : nat
+	% @original_name(name=Knowers)
+	E_sK_Knowers : set(agent)
+	% @original_name(name=Knowers)
+	E_sK_Knowers_ : set(agent)
+	% @original_name(name=Knowers)
+	E_sK_Knowers__ : set(agent)
+	% @original_name(name=Msg)
+	E_sK_Msg : message
+	% @original_name(name=Msg)
+	E_sK_Msg_ : message
+	% @original_name(name=Msg)
+	E_sK_Msg__ : message
+	% @original_name(name=Knowers)
+	E_sL_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sL_Msg : message
+	% @original_name(name=Knowers)
+	E_sN1_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sN1_Msg : message
+	% @original_name(name=Knowers)
+	E_sN2_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sN2_Msg : message
+	% @original_name(name=Knowers)
+	E_sN3_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sN3_Msg : message
+	% @original_name(name=Knowers)
+	E_sN5_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sN5_Msg : message
+	% @original_name(name=Knowers)
+	E_sPW_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sPW_Msg : message
+	% @original_name(name=Knowers)
+	E_sTIDU_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sTIDU_Msg : message
+	% @original_name(name=Knowers)
+	E_sX5_Knowers : set(agent)
+	% @original_name(name=Msg)
+	E_sX5_Msg : message
+	GID : message
+	GS : message
+	GU : message
+	GWN : agent
+	Generate_localion_arg_1 : agent
+	HGS : message
+	HGU : message
+	HM : message
+	HMAC : message
+	% @original_name(name=HM; match=true)
+	HM_1 : message
+	HSG : message
+	% @original_name(name=HSG; match=true)
+	HSG_1 : message
+	HUG : message
+	Hash_functionn_arg_1 : message
+	IDUi : message
+	% @original_name(name=IDUi; match=true)
+	IDUi_1 : message
+	IID : nat
+	% @original_name(name=IID; fresh=true)
+	IID_1 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_10 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_11 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_12 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_13 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_2 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_3 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_4 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_5 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_6 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_7 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_8 : nat
+	% @original_name(name=IID; fresh=true)
+	IID_9 : nat
+	Kgr : symmetric_key
+	Knowers : set(agent)
+	Ksr : symmetric_key
+	Kur : symmetric_key
+	Lc : message
+	Lmax : message
+	Lp : message
+	M : message
+	% @original_name(name=M; match=true)
+	M_1 : message
+	Msg : message
+	N1 : message
+	% @original_name(name=N1; fresh=true)
+	N1_1 : message
+	N2 : message
+	N3 : message
+	N5 : message
+	PWi : message
+	% @original_name(name=PWi; match=true)
+	PWi_1 : message
+	Pk_arg_1 : agent
+	R : message
+	RA : agent
+	RHMAC : message
+	Random_N5_from_DB_arg_1 : agent
+	Random_N5_from_DB_arg_2 : agent
+	Recupere_N1_arg_1 : agent
+	Recupere_N1_arg_2 : message
+	Recupere_N2_arg_1 : agent
+	Recupere_N2_arg_2 : message
+	Recupere_N2_arg_3 : agent
+	Recupere_N2_arg_4 : message
+	Recupere_N3_arg_1 : agent
+	Recupere_N3_arg_2 : message
+	SG : message
+	% @original_name(name=SG; match=true)
+	SG_1 : message
+	SIDj : message
+	SL : nat
+	Sk : message
+	Succ_arg_1 : nat
+	TD : message
+	TIDUi : message
+	% @original_name(name=TIDUi; match=true)
+	TIDUi_1 : message
+	TIDUitmp : message
+	UG : message
+	V1 : message
+	V2 : message
+	V3 : message
+	X5 : message
+	X5_in_DB_arg_1 : agent
+	X5_in_DB_arg_2 : message
+	Xn : message
+	Xor_functionn_arg_1 : message
+	Xor_functionn_arg_2 : message
+	Xp : message
+	atag : slabel
+	ctag : slabel
+	dummy_agent : agent
+	dummy_agent_1 : agent
+	dummy_agent_2 : agent
+	dummy_agent_3 : agent
+	dummy_message : message
+	dummy_nat : nat
+	dummy_symmetric_key : symmetric_key
+	false : fact
+	root : agent
+	secret_ID : protocol_id
+	secret_Kgr : protocol_id
+	secret_Ksr : protocol_id
+	secret_Kur : protocol_id
+	secret_Lc : protocol_id
+	secret_N1 : protocol_id
+	secret_N2 : protocol_id
+	secret_N3 : protocol_id
+	secret_N5 : protocol_id
+	secret_PW : protocol_id
+	secret_TIDUi : protocol_id
+	secret_X5 : protocol_id
+	stag : slabel
+	true : fact
+
+section inits:
+
+% @new_instance(new_entity=Environment; Actor=root; IID=0; SL=1; A=dummy_agent; RA=dummy_agent; GWN=dummy_agent; B=dummy_agent)
+initial_state init :=
+	child(dummy_nat, 0).
+	dishonest(i).
+	iknows(0).
+	iknows(atag).
+	iknows(ctag).
+	iknows(i).
+	iknows(inv(ak(i))).
+	iknows(inv(ck(i))).
+	iknows(inv(pk(i))).
+	iknows(root).
+	iknows(stag).
+	state_Environment(root, 0, 1, dummy_agent, dummy_agent, dummy_agent, dummy_agent).
+	true
+
+section hornClauses:
+
+hc public_ck(Ck_arg_1) :=
+	iknows(ck(Ck_arg_1)) :-
+		iknows(Ck_arg_1)
+
+hc public_ak(Ak_arg_1) :=
+	iknows(ak(Ak_arg_1)) :-
+		iknows(Ak_arg_1)
+
+hc public_pk(Pk_arg_1) :=
+	iknows(pk(Pk_arg_1)) :-
+		iknows(Pk_arg_1)
+
+hc public_succ(Succ_arg_1) :=
+	iknows(succ(Succ_arg_1)) :-
+		iknows(Succ_arg_1)
+
+hc inv_succ_1(Succ_arg_1) :=
+	iknows(Succ_arg_1) :-
+		iknows(succ(Succ_arg_1))
+
+hc public_xor_functionn(Xor_functionn_arg_1, Xor_functionn_arg_2) :=
+	iknows(xor_functionn(Xor_functionn_arg_1, Xor_functionn_arg_2)) :-
+		iknows(Xor_functionn_arg_1),
+		iknows(Xor_functionn_arg_2)
+
+hc public_hash_functionn(Hash_functionn_arg_1) :=
+	iknows(hash_functionn(Hash_functionn_arg_1)) :-
+		iknows(Hash_functionn_arg_1)
+
+hc public_generate_localion(Generate_localion_arg_1) :=
+	iknows(generate_localion(Generate_localion_arg_1)) :-
+		iknows(Generate_localion_arg_1)
+
+hc inv_generate_localion_1(Generate_localion_arg_1) :=
+	iknows(Generate_localion_arg_1) :-
+		iknows(generate_localion(Generate_localion_arg_1))
+
+hc inv_x5_in_DB_1(X5_in_DB_arg_1, X5_in_DB_arg_2) :=
+	iknows(X5_in_DB_arg_1) :-
+		iknows(x5_in_DB(X5_in_DB_arg_1, X5_in_DB_arg_2))
+
+hc inv_x5_in_DB_2(X5_in_DB_arg_1, X5_in_DB_arg_2) :=
+	iknows(X5_in_DB_arg_2) :-
+		iknows(x5_in_DB(X5_in_DB_arg_1, X5_in_DB_arg_2))
+
+hc inv_recupere_N2_1(Recupere_N2_arg_1, Recupere_N2_arg_2) :=
+	iknows(Recupere_N2_arg_1) :-
+		iknows(recupere_N2(Recupere_N2_arg_1, Recupere_N2_arg_2))
+
+hc inv_recupere_N2_2(Recupere_N2_arg_1, Recupere_N2_arg_2) :=
+	iknows(Recupere_N2_arg_2) :-
+		iknows(recupere_N2(Recupere_N2_arg_1, Recupere_N2_arg_2))
+
+hc inv_recupere_N3_1(Recupere_N3_arg_1, Recupere_N3_arg_2) :=
+	iknows(Recupere_N3_arg_1) :-
+		iknows(recupere_N3(Recupere_N3_arg_1, Recupere_N3_arg_2))
+
+hc inv_recupere_N3_2(Recupere_N3_arg_1, Recupere_N3_arg_2) :=
+	iknows(Recupere_N3_arg_2) :-
+		iknows(recupere_N3(Recupere_N3_arg_1, Recupere_N3_arg_2))
+
+hc inv_random_N5_from_DB_1(Random_N5_from_DB_arg_1, Random_N5_from_DB_arg_2) :=
+	iknows(Random_N5_from_DB_arg_1) :-
+		iknows(random_N5_from_DB(Random_N5_from_DB_arg_1, Random_N5_from_DB_arg_2))
+
+hc inv_random_N5_from_DB_2(Random_N5_from_DB_arg_1, Random_N5_from_DB_arg_2) :=
+	iknows(Random_N5_from_DB_arg_2) :-
+		iknows(random_N5_from_DB(Random_N5_from_DB_arg_1, Random_N5_from_DB_arg_2))
+
+hc inv_recupere_N1_1(Recupere_N1_arg_1, Recupere_N1_arg_2) :=
+	iknows(Recupere_N1_arg_1) :-
+		iknows(recupere_N1(Recupere_N1_arg_1, Recupere_N1_arg_2))
+
+hc inv_recupere_N1_2(Recupere_N1_arg_1, Recupere_N1_arg_2) :=
+	iknows(Recupere_N1_arg_2) :-
+		iknows(recupere_N1(Recupere_N1_arg_1, Recupere_N1_arg_2))
+
+hc inv_e_A_B_recupere_N2_1(Recupere_N2_arg_3, Recupere_N2_arg_4) :=
+	iknows(Recupere_N2_arg_3) :-
+		iknows(e_A_B_recupere_N2(Recupere_N2_arg_3, Recupere_N2_arg_4))
+
+hc inv_e_A_B_recupere_N2_2(Recupere_N2_arg_3, Recupere_N2_arg_4) :=
+	iknows(Recupere_N2_arg_4) :-
+		iknows(e_A_B_recupere_N2(Recupere_N2_arg_3, Recupere_N2_arg_4))
+
+hc inv_choose_anathor_password_1(Choose_anathor_password_arg_1) :=
+	iknows(Choose_anathor_password_arg_1) :-
+		iknows(choose_anathor_password(Choose_anathor_password_arg_1))
+
+section rules:
+
+% @new_instance(entity=Environment; iid=IID; line=298; new_entity=Registration; Actor=dummy_agent_1; IID=IID_1; SL=1; A=A; RA=RA; GWN=GWN; B=B)
+% @new_instance(entity=Environment; iid=IID; line=299; new_entity=Authentification; Actor=dummy_agent_2; IID=IID_2; SL=1; A=A; GWN=GWN; B=B)
+% @new_instance(entity=Environment; iid=IID; line=300; new_entity=ChangePW_without_RA; Actor=dummy_agent_3; IID=IID_3; SL=1; A=A; GWN=GWN; B=B)
+% @step_label(entity=Environment; iid=IID; line=300; variable=SL; term=4)
+step step_001_Environment__line_298(A, Actor, B, GWN, IID, IID_1, IID_2, IID_3, RA) :=
+	state_Environment(Actor, IID, 1, A, RA, GWN, B)
+	=[exists IID_1, IID_2, IID_3]=>
+	child(IID, IID_1).
+	child(IID, IID_2).
+	child(IID, IID_3).
+	state_Authentification(dummy_agent_2, IID_2, 1, A, GWN, B).
+	state_ChangePW_without_RA(dummy_agent_3, IID_3, 1, A, GWN, B).
+	state_Environment(Actor, IID, 4, A, RA, GWN, B).
+	state_Registration(dummy_agent_1, IID_1, 1, A, RA, GWN, B)
+
+% @new_instance(entity=Registration; iid=E_R_IID; line=107; new_entity=Alice; Actor=E_R_A; IID=IID_4; SL=1; RA=E_R_RA; GWN=E_R_GWN; B=E_R_B; IDUi=dummy_message; PWi=dummy_message; TIDUi=dummy_message; TIDUitmp=dummy_message; Kur=dummy_symmetric_key)
+% @new_instance(entity=Registration; iid=E_R_IID; line=108; new_entity=RA; Actor=E_R_RA; IID=IID_5; SL=1; A=E_R_A; GWN=E_R_GWN; B=E_R_B; V1=dummy_message; V2=dummy_message; V3=dummy_message; IDUi=dummy_message; PWi=dummy_message; TIDUi=dummy_message; GID=dummy_message; Kur=dummy_symmetric_key; Ksr=dummy_symmetric_key; Kgr=dummy_symmetric_key)
+% @new_instance(entity=Registration; iid=E_R_IID; line=109; new_entity=GWN; Actor=E_R_GWN; IID=IID_6; SL=1; A=E_R_A; RA=E_R_RA; B=E_R_B; TIDUi=dummy_message; V2=dummy_message; V3=dummy_message; Kgr=dummy_symmetric_key)
+% @new_instance(entity=Registration; iid=E_R_IID; line=110; new_entity=Bob; Actor=E_R_B; IID=IID_7; SL=1; RA=E_R_RA; V3=dummy_message; Ksr=dummy_symmetric_key)
+% @step_label(entity=Registration; iid=E_R_IID; line=110; variable=SL; term=5)
+step step_002_Registration__line_107(E_R_A, E_R_Actor, E_R_B, E_R_GWN, E_R_IID, E_R_RA, IID_4, IID_5, IID_6, IID_7) :=
+	not(dishonest(E_R_Actor)).
+	state_Registration(E_R_Actor, E_R_IID, 1, E_R_A, E_R_RA, E_R_GWN, E_R_B)
+	=[exists IID_4, IID_5, IID_6, IID_7]=>
+	child(E_R_IID, IID_4).
+	child(E_R_IID, IID_5).
+	child(E_R_IID, IID_6).
+	child(E_R_IID, IID_7).
+	state_Alice(E_R_A, IID_4, 1, E_R_RA, E_R_GWN, E_R_B, dummy_message, dummy_message, dummy_message, dummy_message, dummy_symmetric_key).
+	state_Bob(E_R_B, IID_7, 1, E_R_RA, dummy_message, dummy_symmetric_key).
+	state_GWN(E_R_GWN, IID_6, 1, E_R_A, E_R_RA, E_R_B, dummy_message, dummy_message, dummy_message, dummy_symmetric_key).
+	state_RA(E_R_RA, IID_5, 1, E_R_A, E_R_GWN, E_R_B, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_symmetric_key, dummy_symmetric_key, dummy_symmetric_key).
+	state_Registration(E_R_Actor, E_R_IID, 5, E_R_A, E_R_RA, E_R_GWN, E_R_B)
+
+% @assignment(entity=Alice; iid=E_R_A_IID; line=24; variable=IDUi; term=select_id(E_R_A_Actor))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=25; fact=secret(select_id(E_R_A_Actor), secret_ID, secret_ID_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=25; fact=contains(E_R_A_Actor, secret_ID_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=25; fact=contains(E_R_A_RA, secret_ID_set(E_R_IID)))
+% @assignment(entity=Alice; iid=E_R_A_IID; line=26; variable=PWi; term=choose_password(E_R_A_Actor))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=27; fact=secret(choose_password(E_R_A_Actor), secret_PW, secret_PW_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=27; fact=contains(E_R_A_Actor, secret_PW_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=27; fact=contains(E_R_A_RA, secret_PW_set(E_R_IID)))
+% @communication(entity=Alice; iid=E_R_A_IID; line=28; sender=E_R_A_Actor; receiver=E_R_A_RA; payload=scrypt(Kur, pair(select_id(E_R_A_Actor), choose_password(E_R_A_Actor))); channel=regularCh; fact=iknows(scrypt(Kur, pair(select_id(E_R_A_Actor), choose_password(E_R_A_Actor)))); direction=send)
+% @step_label(entity=Alice; iid=E_R_A_IID; line=28; variable=SL; term=6)
+step step_003_Alice__line_24(E_R_A_Actor, E_R_A_B, E_R_A_GWN, E_R_A_IID, E_R_A_RA, E_R_IID, IDUi, Kur, PWi, TIDUi, TIDUitmp) :=
+	child(E_R_IID, E_R_A_IID).
+	not(dishonest(E_R_A_Actor)).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 1, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur)
+	=>
+	child(E_R_IID, E_R_A_IID).
+	contains(E_R_A_Actor, secret_ID_set(E_R_IID)).
+	contains(E_R_A_Actor, secret_PW_set(E_R_IID)).
+	contains(E_R_A_RA, secret_ID_set(E_R_IID)).
+	contains(E_R_A_RA, secret_PW_set(E_R_IID)).
+	iknows(scrypt(Kur, pair(select_id(E_R_A_Actor), choose_password(E_R_A_Actor)))).
+	secret(choose_password(E_R_A_Actor), secret_PW, secret_PW_set(E_R_IID)).
+	secret(select_id(E_R_A_Actor), secret_ID, secret_ID_set(E_R_IID)).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 6, E_R_A_RA, E_R_A_GWN, E_R_A_B, select_id(E_R_A_Actor), choose_password(E_R_A_Actor), TIDUi, TIDUitmp, Kur)
+
+% @communication(entity=Alice; iid=E_R_A_IID; line=29; sender=E_R_A_RA; receiver=E_R_A_Actor; payload=scrypt(Kur, pair(TIDUi_1, hash_functionn(pair(IDUi_1, PWi_1)))); channel=regularCh; fact=iknows(scrypt(Kur, pair(TIDUi_1, hash_functionn(pair(IDUi_1, PWi_1))))); direction=receive)
+% @match(entity=Alice; iid=E_R_A_IID; line=29; variable=IDUi; term=IDUi_1)
+% @match(entity=Alice; iid=E_R_A_IID; line=29; variable=PWi; term=PWi_1)
+% @match(entity=Alice; iid=E_R_A_IID; line=29; variable=TIDUi; term=TIDUi_1)
+% @step_label(entity=Alice; iid=E_R_A_IID; line=29; variable=SL; term=7)
+step step_004_Alice__line_29(E_R_A_Actor, E_R_A_B, E_R_A_GWN, E_R_A_IID, E_R_A_RA, IDUi, IDUi_1, Kur, PWi, PWi_1, TIDUi, TIDUi_1, TIDUitmp) :=
+	iknows(scrypt(Kur, pair(TIDUi_1, hash_functionn(pair(IDUi_1, PWi_1))))).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 6, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur)
+	=>
+	state_Alice(E_R_A_Actor, E_R_A_IID, 7, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi_1, PWi_1, TIDUi_1, TIDUitmp, Kur)
+
+% @guard(entity=Alice; iid=E_R_A_IID; line=30; test=exist_tid_DB(E_R_A_Actor, TIDUi))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=31; fact=store_V1(E_R_A_Actor, hash_functionn(pair(IDUi, PWi))))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=secret(TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_RA, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_GWN, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_B, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=secret(Kur, secret_Kur, secret_Kur_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=contains(E_R_A_Actor, secret_Kur_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=contains(E_R_A_RA, secret_Kur_set(E_R_IID)))
+% @step_label(entity=Alice; iid=E_R_A_IID; line=37; variable=SL; term=11)
+step step_005_Alice__line_30(E_R_A_Actor, E_R_A_B, E_R_A_GWN, E_R_A_IID, E_R_A_RA, E_R_IID, IDUi, Kur, PWi, TIDUi, TIDUitmp) :=
+	child(E_R_IID, E_R_A_IID).
+	exist_tid_DB(E_R_A_Actor, TIDUi).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 7, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur)
+	=>
+	child(E_R_IID, E_R_A_IID).
+	contains(E_R_A_Actor, secret_Kur_set(E_R_IID)).
+	contains(E_R_A_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_GWN, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_RA, secret_Kur_set(E_R_IID)).
+	contains(E_R_A_RA, secret_TIDUi_set(E_R_IID)).
+	exist_tid_DB(E_R_A_Actor, TIDUi).
+	secret(Kur, secret_Kur, secret_Kur_set(E_R_IID)).
+	secret(TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 11, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur).
+	store_V1(E_R_A_Actor, hash_functionn(pair(IDUi, PWi)))
+
+% @guard(entity=Alice; iid=E_R_A_IID; line=30; test=not(exist_tid_DB(E_R_A_Actor, TIDUi)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=34; fact=store_tid(E_R_A_Actor, TIDUi))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=secret(TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_RA, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_GWN, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=36; fact=contains(E_R_A_B, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=secret(Kur, secret_Kur, secret_Kur_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=contains(E_R_A_Actor, secret_Kur_set(E_R_IID)))
+% @introduce(entity=Alice; iid=E_R_A_IID; line=37; fact=contains(E_R_A_RA, secret_Kur_set(E_R_IID)))
+% @step_label(entity=Alice; iid=E_R_A_IID; line=37; variable=SL; term=11)
+step step_006_Alice__line_30(E_R_A_Actor, E_R_A_B, E_R_A_GWN, E_R_A_IID, E_R_A_RA, E_R_IID, IDUi, Kur, PWi, TIDUi, TIDUitmp) :=
+	child(E_R_IID, E_R_A_IID).
+	not(exist_tid_DB(E_R_A_Actor, TIDUi)).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 7, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur)
+	=>
+	child(E_R_IID, E_R_A_IID).
+	contains(E_R_A_Actor, secret_Kur_set(E_R_IID)).
+	contains(E_R_A_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_GWN, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_A_RA, secret_Kur_set(E_R_IID)).
+	contains(E_R_A_RA, secret_TIDUi_set(E_R_IID)).
+	secret(Kur, secret_Kur, secret_Kur_set(E_R_IID)).
+	secret(TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_Alice(E_R_A_Actor, E_R_A_IID, 11, E_R_A_RA, E_R_A_GWN, E_R_A_B, IDUi, PWi, TIDUi, TIDUitmp, Kur).
+	store_tid(E_R_A_Actor, TIDUi)
+
+% @communication(entity=RA; iid=E_R_RA_IID; line=50; sender=Dummy; receiver=E_R_RA_Actor; payload=scrypt(E_R_RA_Kur, pair(E_R_RA_IDUi_1, E_R_RA_PWi_1)); channel=regularCh; fact=iknows(scrypt(E_R_RA_Kur, pair(E_R_RA_IDUi_1, E_R_RA_PWi_1))); direction=receive)
+% @match(entity=RA; iid=E_R_RA_IID; line=50; variable=IDUi; term=E_R_RA_IDUi_1)
+% @match(entity=RA; iid=E_R_RA_IID; line=50; variable=PWi; term=E_R_RA_PWi_1)
+% @step_label(entity=RA; iid=E_R_RA_IID; line=50; variable=SL; term=2)
+step step_007_RA__line_50(E_R_RA_A, E_R_RA_Actor, E_R_RA_B, E_R_RA_GWN, E_R_RA_IDUi, E_R_RA_IDUi_1, E_R_RA_IID, E_R_RA_Kur, E_R_RA_PWi, E_R_RA_PWi_1, E_R_RA_TIDUi, GID, Kgr, Ksr, V1, V2, V3) :=
+	iknows(scrypt(E_R_RA_Kur, pair(E_R_RA_IDUi_1, E_R_RA_PWi_1))).
+	not(dishonest(E_R_RA_Actor)).
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 1, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, V1, V2, V3, E_R_RA_IDUi, E_R_RA_PWi, E_R_RA_TIDUi, GID, E_R_RA_Kur, Ksr, Kgr)
+	=>
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 2, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, V1, V2, V3, E_R_RA_IDUi_1, E_R_RA_PWi_1, E_R_RA_TIDUi, GID, E_R_RA_Kur, Ksr, Kgr)
+
+% @guard(entity=RA; iid=E_R_RA_IID; line=51; test=check_exsit_id_pw_DB(E_R_RA_Actor, E_R_RA_IDUi))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=52; variable=TIDUi; term=search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=secret(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_A, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_GWN, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_B, secret_TIDUi_set(E_R_IID)))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=58; variable=V1; term=hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=59; variable=V2; term=hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=60; variable=V3; term=hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))
+% @communication(entity=RA; iid=E_R_RA_IID; line=61; sender=E_R_RA_Actor; receiver=E_R_RA_A; payload=scrypt(E_R_RA_Kur, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)))); channel=regularCh; fact=iknows(scrypt(E_R_RA_Kur, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi))))); direction=send)
+% @communication(entity=RA; iid=E_R_RA_IID; line=62; sender=E_R_RA_Actor; receiver=E_R_RA_GWN; payload=scrypt(Kgr, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi)))))); channel=regularCh; fact=iknows(scrypt(Kgr, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))))); direction=send)
+% @communication(entity=RA; iid=E_R_RA_IID; line=63; sender=E_R_RA_Actor; receiver=E_R_RA_B; payload=scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi)))); channel=regularCh; fact=iknows(scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))); direction=send)
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=secret(E_R_RA_IDUi, secret_ID, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=contains(E_R_RA_Actor, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=contains(E_R_RA_A, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=secret(E_R_RA_PWi, secret_PW, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=contains(E_R_RA_Actor, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=contains(E_R_RA_A, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=secret(E_R_RA_Kur, secret_Kur, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=contains(E_R_RA_Actor, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=contains(E_R_RA_A, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=secret(Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=contains(E_R_RA_Actor, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=contains(E_R_RA_GWN, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=secret(Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=contains(E_R_RA_Actor, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=contains(E_R_RA_B, secret_Ksr_set(E_R_IID)))
+% @step_label(entity=RA; iid=E_R_RA_IID; line=68; variable=SL; term=16)
+step step_008_RA__line_51(E_R_IID, E_R_RA_A, E_R_RA_Actor, E_R_RA_B, E_R_RA_GWN, E_R_RA_IDUi, E_R_RA_IID, E_R_RA_Kur, E_R_RA_PWi, E_R_RA_TIDUi, GID, Kgr, Ksr, V1, V2, V3) :=
+	check_exsit_id_pw_DB(E_R_RA_Actor, E_R_RA_IDUi).
+	child(E_R_IID, E_R_RA_IID).
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 2, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, V1, V2, V3, E_R_RA_IDUi, E_R_RA_PWi, E_R_RA_TIDUi, GID, E_R_RA_Kur, Ksr, Kgr)
+	=>
+	check_exsit_id_pw_DB(E_R_RA_Actor, E_R_RA_IDUi).
+	child(E_R_IID, E_R_RA_IID).
+	contains(E_R_RA_A, secret_ID_set(E_R_IID)).
+	contains(E_R_RA_A, secret_Kur_set(E_R_IID)).
+	contains(E_R_RA_A, secret_PW_set(E_R_IID)).
+	contains(E_R_RA_A, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_ID_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Kgr_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Ksr_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Kur_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_PW_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_B, secret_Ksr_set(E_R_IID)).
+	contains(E_R_RA_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_GWN, secret_Kgr_set(E_R_IID)).
+	contains(E_R_RA_GWN, secret_TIDUi_set(E_R_IID)).
+	iknows(scrypt(E_R_RA_Kur, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi))))).
+	iknows(scrypt(Kgr, pair(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))))).
+	iknows(scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))).
+	secret(E_R_RA_IDUi, secret_ID, secret_ID_set(E_R_IID)).
+	secret(E_R_RA_Kur, secret_Kur, secret_Kur_set(E_R_IID)).
+	secret(E_R_RA_PWi, secret_PW, secret_PW_set(E_R_IID)).
+	secret(Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)).
+	secret(Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)).
+	secret(search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 16, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)), hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))), E_R_RA_IDUi, E_R_RA_PWi, search_tid_DB(E_R_RA_Actor, E_R_RA_IDUi), GID, E_R_RA_Kur, Ksr, Kgr)
+
+% @guard(entity=RA; iid=E_R_RA_IID; line=51; test=not(check_exsit_id_pw_DB(E_R_RA_Actor, E_R_RA_IDUi)))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=55; variable=TIDUi; term=create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=secret(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_A, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_GWN, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=57; fact=contains(E_R_RA_B, secret_TIDUi_set(E_R_IID)))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=58; variable=V1; term=hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=59; variable=V2; term=hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))))
+% @assignment(entity=RA; iid=E_R_RA_IID; line=60; variable=V3; term=hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))
+% @communication(entity=RA; iid=E_R_RA_IID; line=61; sender=E_R_RA_Actor; receiver=E_R_RA_A; payload=scrypt(E_R_RA_Kur, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)))); channel=regularCh; fact=iknows(scrypt(E_R_RA_Kur, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi))))); direction=send)
+% @communication(entity=RA; iid=E_R_RA_IID; line=62; sender=E_R_RA_Actor; receiver=E_R_RA_GWN; payload=scrypt(Kgr, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi)))))); channel=regularCh; fact=iknows(scrypt(Kgr, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))))); direction=send)
+% @communication(entity=RA; iid=E_R_RA_IID; line=63; sender=E_R_RA_Actor; receiver=E_R_RA_B; payload=scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi)))); channel=regularCh; fact=iknows(scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))); direction=send)
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=secret(E_R_RA_IDUi, secret_ID, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=contains(E_R_RA_Actor, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=64; fact=contains(E_R_RA_A, secret_ID_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=secret(E_R_RA_PWi, secret_PW, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=contains(E_R_RA_Actor, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=65; fact=contains(E_R_RA_A, secret_PW_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=secret(E_R_RA_Kur, secret_Kur, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=contains(E_R_RA_Actor, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=66; fact=contains(E_R_RA_A, secret_Kur_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=secret(Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=contains(E_R_RA_Actor, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=67; fact=contains(E_R_RA_GWN, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=secret(Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=contains(E_R_RA_Actor, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=RA; iid=E_R_RA_IID; line=68; fact=contains(E_R_RA_B, secret_Ksr_set(E_R_IID)))
+% @step_label(entity=RA; iid=E_R_RA_IID; line=68; variable=SL; term=16)
+step step_009_RA__line_51(E_R_IID, E_R_RA_A, E_R_RA_Actor, E_R_RA_B, E_R_RA_GWN, E_R_RA_IDUi, E_R_RA_IID, E_R_RA_Kur, E_R_RA_PWi, E_R_RA_TIDUi, GID, Kgr, Ksr, V1, V2, V3) :=
+	child(E_R_IID, E_R_RA_IID).
+	not(check_exsit_id_pw_DB(E_R_RA_Actor, E_R_RA_IDUi)).
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 2, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, V1, V2, V3, E_R_RA_IDUi, E_R_RA_PWi, E_R_RA_TIDUi, GID, E_R_RA_Kur, Ksr, Kgr)
+	=>
+	child(E_R_IID, E_R_RA_IID).
+	contains(E_R_RA_A, secret_ID_set(E_R_IID)).
+	contains(E_R_RA_A, secret_Kur_set(E_R_IID)).
+	contains(E_R_RA_A, secret_PW_set(E_R_IID)).
+	contains(E_R_RA_A, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_ID_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Kgr_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Ksr_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_Kur_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_PW_set(E_R_IID)).
+	contains(E_R_RA_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_B, secret_Ksr_set(E_R_IID)).
+	contains(E_R_RA_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_RA_GWN, secret_Kgr_set(E_R_IID)).
+	contains(E_R_RA_GWN, secret_TIDUi_set(E_R_IID)).
+	iknows(scrypt(E_R_RA_Kur, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi))))).
+	iknows(scrypt(Kgr, pair(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), pair(hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))))).
+	iknows(scrypt(Ksr, hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))))).
+	secret(E_R_RA_IDUi, secret_ID, secret_ID_set(E_R_IID)).
+	secret(E_R_RA_Kur, secret_Kur, secret_Kur_set(E_R_IID)).
+	secret(E_R_RA_PWi, secret_PW, secret_PW_set(E_R_IID)).
+	secret(Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)).
+	secret(Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)).
+	secret(create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_RA(E_R_RA_Actor, E_R_RA_IID, 16, E_R_RA_A, E_R_RA_GWN, E_R_RA_B, hash_functionn(pair(E_R_RA_IDUi, E_R_RA_PWi)), hash_functionn(pair(GID, xor_functionn(E_R_RA_IDUi, E_R_RA_PWi))), hash_functionn(xor_functionn(GID, pair(E_R_RA_IDUi, E_R_RA_PWi))), E_R_RA_IDUi, E_R_RA_PWi, create_tid(E_R_RA_Actor, E_R_RA_IDUi, E_R_RA_PWi), GID, E_R_RA_Kur, Ksr, Kgr)
+
+% @communication(entity=GWN; iid=E_R_GWN_IID; line=82; sender=Dummy_1; receiver=E_R_GWN_Actor; payload=scrypt(E_R_GWN_Kgr, pair(E_R_GWN_TIDUi_1, pair(E_R_GWN_V2_1, E_R_GWN_V3_1))); channel=regularCh; fact=iknows(scrypt(E_R_GWN_Kgr, pair(E_R_GWN_TIDUi_1, pair(E_R_GWN_V2_1, E_R_GWN_V3_1)))); direction=receive)
+% @match(entity=GWN; iid=E_R_GWN_IID; line=82; variable=TIDUi; term=E_R_GWN_TIDUi_1)
+% @match(entity=GWN; iid=E_R_GWN_IID; line=82; variable=V2; term=E_R_GWN_V2_1)
+% @match(entity=GWN; iid=E_R_GWN_IID; line=82; variable=V3; term=E_R_GWN_V3_1)
+% @step_label(entity=GWN; iid=E_R_GWN_IID; line=82; variable=SL; term=2)
+step step_010_GWN__line_82(E_R_GWN_A, E_R_GWN_Actor, E_R_GWN_B, E_R_GWN_IID, E_R_GWN_Kgr, E_R_GWN_RA, E_R_GWN_TIDUi, E_R_GWN_TIDUi_1, E_R_GWN_V2, E_R_GWN_V2_1, E_R_GWN_V3, E_R_GWN_V3_1) :=
+	iknows(scrypt(E_R_GWN_Kgr, pair(E_R_GWN_TIDUi_1, pair(E_R_GWN_V2_1, E_R_GWN_V3_1)))).
+	not(dishonest(E_R_GWN_Actor)).
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 1, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_GWN_Kgr)
+	=>
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 2, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi_1, E_R_GWN_V2_1, E_R_GWN_V3_1, E_R_GWN_Kgr)
+
+% @guard(entity=GWN; iid=E_R_GWN_IID; line=83; test=tid_exist_DB(E_R_GWN_Actor, E_R_GWN_TIDUi))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=84; fact=update_tid(E_R_GWN_Actor, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=secret(E_R_GWN_TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_A, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_RA, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_B, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=secret(E_R_GWN_Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=contains(E_R_GWN_Actor, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=contains(E_R_GWN_RA, secret_Kgr_set(E_R_IID)))
+% @step_label(entity=GWN; iid=E_R_GWN_IID; line=90; variable=SL; term=6)
+step step_011_GWN__line_83(E_R_GWN_A, E_R_GWN_Actor, E_R_GWN_B, E_R_GWN_IID, E_R_GWN_Kgr, E_R_GWN_RA, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_IID) :=
+	child(E_R_IID, E_R_GWN_IID).
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 2, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_GWN_Kgr).
+	tid_exist_DB(E_R_GWN_Actor, E_R_GWN_TIDUi)
+	=>
+	child(E_R_IID, E_R_GWN_IID).
+	contains(E_R_GWN_A, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_Actor, secret_Kgr_set(E_R_IID)).
+	contains(E_R_GWN_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_RA, secret_Kgr_set(E_R_IID)).
+	contains(E_R_GWN_RA, secret_TIDUi_set(E_R_IID)).
+	secret(E_R_GWN_Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)).
+	secret(E_R_GWN_TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 6, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_GWN_Kgr).
+	tid_exist_DB(E_R_GWN_Actor, E_R_GWN_TIDUi).
+	update_tid(E_R_GWN_Actor, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3)
+
+% @guard(entity=GWN; iid=E_R_GWN_IID; line=83; test=not(tid_exist_DB(E_R_GWN_Actor, E_R_GWN_TIDUi)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=87; fact=store_tid_V2_V3(E_R_GWN_Actor, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=secret(E_R_GWN_TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_A, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_RA, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_Actor, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=89; fact=contains(E_R_GWN_B, secret_TIDUi_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=secret(E_R_GWN_Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=contains(E_R_GWN_Actor, secret_Kgr_set(E_R_IID)))
+% @introduce(entity=GWN; iid=E_R_GWN_IID; line=90; fact=contains(E_R_GWN_RA, secret_Kgr_set(E_R_IID)))
+% @step_label(entity=GWN; iid=E_R_GWN_IID; line=90; variable=SL; term=6)
+step step_012_GWN__line_83(E_R_GWN_A, E_R_GWN_Actor, E_R_GWN_B, E_R_GWN_IID, E_R_GWN_Kgr, E_R_GWN_RA, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_IID) :=
+	child(E_R_IID, E_R_GWN_IID).
+	not(tid_exist_DB(E_R_GWN_Actor, E_R_GWN_TIDUi)).
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 2, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_GWN_Kgr)
+	=>
+	child(E_R_IID, E_R_GWN_IID).
+	contains(E_R_GWN_A, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_Actor, secret_Kgr_set(E_R_IID)).
+	contains(E_R_GWN_Actor, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_B, secret_TIDUi_set(E_R_IID)).
+	contains(E_R_GWN_RA, secret_Kgr_set(E_R_IID)).
+	contains(E_R_GWN_RA, secret_TIDUi_set(E_R_IID)).
+	secret(E_R_GWN_Kgr, secret_Kgr, secret_Kgr_set(E_R_IID)).
+	secret(E_R_GWN_TIDUi, secret_TIDUi, secret_TIDUi_set(E_R_IID)).
+	state_GWN(E_R_GWN_Actor, E_R_GWN_IID, 6, E_R_GWN_A, E_R_GWN_RA, E_R_GWN_B, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3, E_R_GWN_Kgr).
+	store_tid_V2_V3(E_R_GWN_Actor, E_R_GWN_TIDUi, E_R_GWN_V2, E_R_GWN_V3)
+
+% @communication(entity=Bob; iid=E_R_B_IID; line=101; sender=Dummy_2; receiver=E_R_B_Actor; payload=scrypt(E_R_B_Ksr, E_R_B_V3_1); channel=regularCh; fact=iknows(scrypt(E_R_B_Ksr, E_R_B_V3_1)); direction=receive)
+% @match(entity=Bob; iid=E_R_B_IID; line=101; variable=V3; term=E_R_B_V3_1)
+% @introduce(entity=Bob; iid=E_R_B_IID; line=102; fact=store_V3(E_R_B_Actor, E_R_B_V3_1))
+% @introduce(entity=Bob; iid=E_R_B_IID; line=103; fact=secret(E_R_B_Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=Bob; iid=E_R_B_IID; line=103; fact=contains(E_R_B_Actor, secret_Ksr_set(E_R_IID)))
+% @introduce(entity=Bob; iid=E_R_B_IID; line=103; fact=contains(E_R_B_RA, secret_Ksr_set(E_R_IID)))
+% @step_label(entity=Bob; iid=E_R_B_IID; line=103; variable=SL; term=4)
+step step_013_Bob__line_101(E_R_B_Actor, E_R_B_IID, E_R_B_Ksr, E_R_B_RA, E_R_B_V3, E_R_B_V3_1, E_R_IID) :=
+	child(E_R_IID, E_R_B_IID).
+	iknows(scrypt(E_R_B_Ksr, E_R_B_V3_1)).
+	not(dishonest(E_R_B_Actor)).
+	state_Bob(E_R_B_Actor, E_R_B_IID, 1, E_R_B_RA, E_R_B_V3, E_R_B_Ksr)
+	=>
+	child(E_R_IID, E_R_B_IID).
+	contains(E_R_B_Actor, secret_Ksr_set(E_R_IID)).
+	contains(E_R_B_RA, secret_Ksr_set(E_R_IID)).
+	secret(E_R_B_Ksr, secret_Ksr, secret_Ksr_set(E_R_IID)).
+	state_Bob(E_R_B_Actor, E_R_B_IID, 4, E_R_B_RA, E_R_B_V3_1, E_R_B_Ksr).
+	store_V3(E_R_B_Actor, E_R_B_V3_1)
+
+% @new_instance(entity=Authentification; iid=E_A_IID; line=243; new_entity=Alice; Actor=E_A_A; IID=IID_8; SL=1; GWN=E_A_GWN; B=E_A_B; N1=dummy_message; Lc=dummy_message; Xn=dummy_message; Xp=dummy_message; DIDui=dummy_message; TIDUi=dummy_message; SIDj=dummy_message; GID=dummy_message; UG=dummy_message; HUG=dummy_message; V2=dummy_message; M=dummy_message; HM=dummy_message; N2=dummy_message; N3=dummy_message; N5=dummy_message; X5=dummy_message; R=dummy_message; RHMAC=dummy_message; Sk=dummy_message)
+% @new_instance(entity=Authentification; iid=E_A_IID; line=244; new_entity=Gateway; Actor=E_A_GWN; IID=IID_9; SL=1; A=E_A_A; B=E_A_B; GID=dummy_message; SIDj=dummy_message; DIDui=dummy_message; UG=dummy_message; HUG=dummy_message; GU=dummy_message; HGU=dummy_message; GS=dummy_message; HGS=dummy_message; SG=dummy_message; HSG=dummy_message; Lc=dummy_message; N1=dummy_message; N2=dummy_message; N3=dummy_message; V2=dummy_message; V3=dummy_message; Sk=dummy_message; Lp=dummy_message; TD=dummy_message; Lmax=dummy_message; N5=dummy_message; C=dummy_message; HMAC=dummy_message; R=dummy_message; RHMAC=dummy_message; X5=dummy_message)
+% @new_instance(entity=Authentification; iid=E_A_IID; line=245; new_entity=Bob; Actor=E_A_B; IID=IID_10; SL=1; A=E_A_A; GWN=E_A_GWN; GS=dummy_message; HGS=dummy_message; SIDj=dummy_message; V3=dummy_message; N1=dummy_message; N2=dummy_message; N3=dummy_message; Sk=dummy_message; SG=dummy_message; HSG=dummy_message)
+% @step_label(entity=Authentification; iid=E_A_IID; line=245; variable=SL; term=4)
+step step_014_Authentification__line_243(E_A_A, E_A_Actor, E_A_B, E_A_GWN, E_A_IID, IID_10, IID_8, IID_9) :=
+	not(dishonest(E_A_Actor)).
+	state_Authentification(E_A_Actor, E_A_IID, 1, E_A_A, E_A_GWN, E_A_B)
+	=[exists IID_10, IID_8, IID_9]=>
+	child(E_A_IID, IID_10).
+	child(E_A_IID, IID_8).
+	child(E_A_IID, IID_9).
+	state_Authentification(E_A_Actor, E_A_IID, 4, E_A_A, E_A_GWN, E_A_B).
+	state_E_A_Alice(E_A_A, IID_8, 1, E_A_GWN, E_A_B, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message).
+	state_E_A_Bob(E_A_B, IID_10, 1, E_A_A, E_A_GWN, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message).
+	state_Gateway(E_A_GWN, IID_9, 1, E_A_A, E_A_B, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message)
+
+% @fresh(entity=E_A_Alice; iid=E_A_A_IID; line=130; variable=N1; term=N1_1)
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=131; fact=secret(N1_1, secret_N1, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=131; fact=contains(E_A_A_Actor, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=131; fact=contains(E_A_A_GWN, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=131; fact=contains(E_A_A_B, secret_N1_set(E_A_IID)))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=132; variable=Lc; term=generate_localion(E_A_A_Actor))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=133; fact=secret(generate_localion(E_A_A_Actor), secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=133; fact=contains(E_A_A_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=133; fact=contains(E_A_A_GWN, secret_Lc_set(E_A_IID)))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=134; variable=Xn; term=hash_functionn(pair(Xp, generate_localion(E_A_A_Actor))))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=135; variable=DIDui; term=xor_functionn(E_A_A_TIDUi, N1_1))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=136; variable=UG; term=xor_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))), E_A_A_V2))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=137; variable=HUG; term=hash_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor))))))))
+% @communication(entity=E_A_Alice; iid=E_A_A_IID; line=138; sender=E_A_A_Actor; receiver=E_A_A_GWN; payload=pair(xor_functionn(E_A_A_TIDUi, N1_1), pair(xor_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))), E_A_A_V2), hash_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor))))))))); channel=regularCh; fact=iknows(pair(xor_functionn(E_A_A_TIDUi, N1_1), pair(xor_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))), E_A_A_V2), hash_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))))))); direction=send)
+% @step_label(entity=Alice; iid=E_A_A_IID; line=138; variable=SL; term=10)
+step step_015_E_A_Alice__line_130(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, E_A_IID, HM, HUG, Lc, M, N1, N1_1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	child(E_A_IID, E_A_A_IID).
+	not(dishonest(E_A_A_Actor)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 1, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+	=[exists N1_1]=>
+	child(E_A_IID, E_A_A_IID).
+	contains(E_A_A_Actor, secret_Lc_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N1_set(E_A_IID)).
+	contains(E_A_A_B, secret_N1_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_Lc_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N1_set(E_A_IID)).
+	iknows(pair(xor_functionn(E_A_A_TIDUi, N1_1), pair(xor_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))), E_A_A_V2), hash_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))))))).
+	secret(N1_1, secret_N1, secret_N1_set(E_A_IID)).
+	secret(generate_localion(E_A_A_Actor), secret_Lc, secret_Lc_set(E_A_IID)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 10, E_A_A_GWN, E_A_A_B, N1_1, generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor))), Xp, xor_functionn(E_A_A_TIDUi, N1_1), E_A_A_TIDUi, SIDj, E_A_A_GID, xor_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor)))))), E_A_A_V2), hash_functionn(pair(SIDj, pair(N1_1, pair(generate_localion(E_A_A_Actor), hash_functionn(pair(Xp, generate_localion(E_A_A_Actor))))))), E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+
+% @communication(entity=E_A_Alice; iid=E_A_A_IID; line=139; sender=E_A_A_GWN; receiver=E_A_A_Actor; payload=pair(M_1, HM_1); channel=regularCh; fact=iknows(pair(M_1, HM_1)); direction=receive)
+% @match(entity=E_A_Alice; iid=E_A_A_IID; line=139; variable=HM; term=HM_1)
+% @match(entity=E_A_Alice; iid=E_A_A_IID; line=139; variable=M; term=M_1)
+% @step_label(entity=Alice; iid=E_A_A_IID; line=139; variable=SL; term=11)
+step step_016_E_A_Alice__line_139(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, HM, HM_1, HUG, Lc, M, M_1, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	iknows(pair(M_1, HM_1)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 10, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+	=>
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 11, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M_1, HM_1, N2, N3, N5, X5, R, RHMAC, Sk)
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=142; test=not(is_it_GID_SIDj(xor_functionn(M, E_A_A_V2))))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=142; variable=SL; term=12)
+step step_017_E_A_Alice__line_142(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	not(is_it_GID_SIDj(xor_functionn(M, E_A_A_V2))).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 11, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+	=>
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 12, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=143; test=equal(hash_functionn(pair(M, E_A_A_V2)), HM))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=144; variable=N5; term=xor_functionn(M, E_A_A_V2))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=145; variable=X5; term=x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=146; fact=secret(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), secret_X5, secret_X5_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=146; fact=contains(E_A_A_Actor, secret_X5_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=146; fact=contains(E_A_A_GWN, secret_X5_set(E_A_IID)))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=147; variable=R; term=xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=148; variable=RHMAC; term=hash_functionn(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), xor_functionn(M, E_A_A_V2))))
+% @communication(entity=E_A_Alice; iid=E_A_A_IID; line=149; sender=E_A_A_Actor; receiver=E_A_A_GWN; payload=pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), hash_functionn(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), xor_functionn(M, E_A_A_V2)))); channel=regularCh; fact=iknows(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), hash_functionn(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), xor_functionn(M, E_A_A_V2))))); direction=send)
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=150; fact=secret(xor_functionn(M, E_A_A_V2), secret_N5, secret_N5_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=150; fact=contains(E_A_A_Actor, secret_N5_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=150; fact=contains(E_A_A_GWN, secret_N5_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=secret(N2, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_GWN, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_B, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=secret(N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_GWN, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_B, secret_N3_set(E_A_IID)))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=162; variable=SL; term=22)
+step step_018_E_A_Alice__line_143(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, E_A_IID, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	child(E_A_IID, E_A_A_IID).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 12, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk) &
+	equal(hash_functionn(pair(M, E_A_A_V2)), HM)
+	=>
+	child(E_A_IID, E_A_A_IID).
+	contains(E_A_A_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N5_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_X5_set(E_A_IID)).
+	contains(E_A_A_B, secret_N2_set(E_A_IID)).
+	contains(E_A_A_B, secret_N3_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N2_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N3_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N5_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_X5_set(E_A_IID)).
+	iknows(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), hash_functionn(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), xor_functionn(M, E_A_A_V2))))).
+	secret(N2, secret_N2, secret_N2_set(E_A_IID)).
+	secret(N3, secret_N3, secret_N3_set(E_A_IID)).
+	secret(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), secret_X5, secret_X5_set(E_A_IID)).
+	secret(xor_functionn(M, E_A_A_V2), secret_N5, secret_N5_set(E_A_IID)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 22, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, xor_functionn(M, E_A_A_V2), x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), hash_functionn(pair(xor_functionn(x5_in_DB(E_A_A_Actor, xor_functionn(M, E_A_A_V2)), E_A_A_V2), xor_functionn(M, E_A_A_V2))), Sk)
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=143; test=not(equal(hash_functionn(pair(M, E_A_A_V2)), HM)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=secret(N2, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_GWN, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_B, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=secret(N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_GWN, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_B, secret_N3_set(E_A_IID)))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=162; variable=SL; term=22)
+step step_019_E_A_Alice__line_143(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, E_A_IID, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	child(E_A_IID, E_A_A_IID).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 12, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk) &
+	not(equal(hash_functionn(pair(M, E_A_A_V2)), HM))
+	=>
+	child(E_A_IID, E_A_A_IID).
+	contains(E_A_A_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_A_B, secret_N2_set(E_A_IID)).
+	contains(E_A_A_B, secret_N3_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N2_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N3_set(E_A_IID)).
+	secret(N2, secret_N2, secret_N2_set(E_A_IID)).
+	secret(N3, secret_N3, secret_N3_set(E_A_IID)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 22, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=142; test=is_it_GID_SIDj(xor_functionn(M, E_A_A_V2)))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=154; variable=N2; term=recupere_N2(E_A_A_Actor, M))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=155; variable=N3; term=recupere_N3(E_A_A_Actor, M))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=155; variable=SL; term=25)
+step step_020_E_A_Alice__line_142(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	is_it_GID_SIDj(xor_functionn(M, E_A_A_V2)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 11, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+	=>
+	is_it_GID_SIDj(xor_functionn(M, E_A_A_V2)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 25, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, recupere_N2(E_A_A_Actor, M), recupere_N3(E_A_A_Actor, M), N5, X5, R, RHMAC, Sk)
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=156; test=equal(hash_functionn(pair(N2, pair(N3, hash_functionn(pair(N1, pair(N2, N3)))))), HM))
+% @assignment(entity=E_A_Alice; iid=E_A_A_IID; line=157; variable=Sk; term=hash_functionn(pair(N1, pair(N2, N3))))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=158; fact=store_Sk(E_A_A_Actor, hash_functionn(pair(N1, pair(N2, N3)))))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=secret(N2, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_GWN, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_B, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=secret(N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_GWN, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_B, secret_N3_set(E_A_IID)))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=162; variable=SL; term=22)
+step step_021_E_A_Alice__line_156(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, E_A_IID, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	child(E_A_IID, E_A_A_IID).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 25, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk) &
+	equal(hash_functionn(pair(N2, pair(N3, hash_functionn(pair(N1, pair(N2, N3)))))), HM)
+	=>
+	child(E_A_IID, E_A_A_IID).
+	contains(E_A_A_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_A_B, secret_N2_set(E_A_IID)).
+	contains(E_A_A_B, secret_N3_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N2_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N3_set(E_A_IID)).
+	secret(N2, secret_N2, secret_N2_set(E_A_IID)).
+	secret(N3, secret_N3, secret_N3_set(E_A_IID)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 22, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, hash_functionn(pair(N1, pair(N2, N3)))).
+	store_Sk(E_A_A_Actor, hash_functionn(pair(N1, pair(N2, N3))))
+
+% @guard(entity=E_A_Alice; iid=E_A_A_IID; line=156; test=not(equal(hash_functionn(pair(N2, pair(N3, hash_functionn(pair(N1, pair(N2, N3)))))), HM)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=secret(N2, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_GWN, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=161; fact=contains(E_A_A_B, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=secret(N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_GWN, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Alice; iid=E_A_A_IID; line=162; fact=contains(E_A_A_B, secret_N3_set(E_A_IID)))
+% @step_label(entity=Alice; iid=E_A_A_IID; line=162; variable=SL; term=22)
+step step_022_E_A_Alice__line_156(DIDui, E_A_A_Actor, E_A_A_B, E_A_A_GID, E_A_A_GWN, E_A_A_IID, E_A_A_TIDUi, E_A_A_V2, E_A_IID, HM, HUG, Lc, M, N1, N2, N3, N5, R, RHMAC, SIDj, Sk, UG, X5, Xn, Xp) :=
+	child(E_A_IID, E_A_A_IID).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 25, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk) &
+	not(equal(hash_functionn(pair(N2, pair(N3, hash_functionn(pair(N1, pair(N2, N3)))))), HM))
+	=>
+	child(E_A_IID, E_A_A_IID).
+	contains(E_A_A_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_A_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_A_B, secret_N2_set(E_A_IID)).
+	contains(E_A_A_B, secret_N3_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N2_set(E_A_IID)).
+	contains(E_A_A_GWN, secret_N3_set(E_A_IID)).
+	secret(N2, secret_N2, secret_N2_set(E_A_IID)).
+	secret(N3, secret_N3, secret_N3_set(E_A_IID)).
+	state_E_A_Alice(E_A_A_Actor, E_A_A_IID, 22, E_A_A_GWN, E_A_A_B, N1, Lc, Xn, Xp, DIDui, E_A_A_TIDUi, SIDj, E_A_A_GID, UG, HUG, E_A_A_V2, M, HM, N2, N3, N5, X5, R, RHMAC, Sk)
+
+% @communication(entity=Gateway; iid=E_A_G_IID; line=179; sender=E_A_G_A; receiver=E_A_G_Actor; payload=pair(E_A_G_DIDui_1, pair(E_A_G_UG_1, E_A_G_HUG_1)); channel=regularCh; fact=iknows(pair(E_A_G_DIDui_1, pair(E_A_G_UG_1, E_A_G_HUG_1))); direction=receive)
+% @match(entity=Gateway; iid=E_A_G_IID; line=179; variable=DIDui; term=E_A_G_DIDui_1)
+% @match(entity=Gateway; iid=E_A_G_IID; line=179; variable=HUG; term=E_A_G_HUG_1)
+% @match(entity=Gateway; iid=E_A_G_IID; line=179; variable=UG; term=E_A_G_UG_1)
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=179; variable=SL; term=2)
+step step_023_Gateway__line_179(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_DIDui_1, E_A_G_GID, E_A_G_HUG, E_A_G_HUG_1, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_UG_1, E_A_G_V2, E_A_G_V3, E_A_G_X5, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	iknows(pair(E_A_G_DIDui_1, pair(E_A_G_UG_1, E_A_G_HUG_1))).
+	not(dishonest(E_A_G_Actor)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 1, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 2, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui_1, E_A_G_UG_1, E_A_G_HUG_1, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=180; test=equal(hash_functionn(xor_functionn(E_A_G_UG, E_A_G_V2)), E_A_G_HUG))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=180; variable=SL; term=3)
+step step_024_Gateway__line_180(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 2, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	equal(hash_functionn(xor_functionn(E_A_G_UG, E_A_G_V2)), E_A_G_HUG)
+	=>
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 3, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=181; test=not(inf_LDmax(E_A_G_Actor, E_A_G_Lc, Lp, TD, Lmax)))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=182; variable=N5; term=random_N5_from_DB(E_A_G_Actor, E_A_G_A))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=183; fact=secret(random_N5_from_DB(E_A_G_Actor, E_A_G_A), secret_N5, secret_N5_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=183; fact=contains(E_A_G_Actor, secret_N5_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=183; fact=contains(E_A_G_A, secret_N5_set(E_A_IID)))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=184; variable=C; term=xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=185; variable=HMAC; term=hash_functionn(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), random_N5_from_DB(E_A_G_Actor, E_A_G_A))))
+% @communication(entity=Gateway; iid=E_A_G_IID; line=186; sender=E_A_G_Actor; receiver=E_A_G_A; payload=pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), hash_functionn(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), random_N5_from_DB(E_A_G_Actor, E_A_G_A)))); channel=regularCh; fact=iknows(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), hash_functionn(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), random_N5_from_DB(E_A_G_Actor, E_A_G_A))))); direction=send)
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=186; variable=SL; term=9)
+step step_025_Gateway__line_181(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	not(inf_LDmax(E_A_G_Actor, E_A_G_Lc, Lp, TD, Lmax)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 3, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_N5_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N5_set(E_A_IID)).
+	iknows(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), hash_functionn(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), random_N5_from_DB(E_A_G_Actor, E_A_G_A))))).
+	secret(random_N5_from_DB(E_A_G_Actor, E_A_G_A), secret_N5, secret_N5_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 9, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, random_N5_from_DB(E_A_G_Actor, E_A_G_A), xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), hash_functionn(pair(xor_functionn(random_N5_from_DB(E_A_G_Actor, E_A_G_A), E_A_G_V2), random_N5_from_DB(E_A_G_Actor, E_A_G_A))), E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @communication(entity=Gateway; iid=E_A_G_IID; line=187; sender=E_A_G_A; receiver=E_A_G_Actor; payload=pair(E_A_G_R_1, E_A_G_RHMAC_1); channel=regularCh; fact=iknows(pair(E_A_G_R_1, E_A_G_RHMAC_1)); direction=receive)
+% @match(entity=Gateway; iid=E_A_G_IID; line=187; variable=R; term=E_A_G_R_1)
+% @match(entity=Gateway; iid=E_A_G_IID; line=187; variable=RHMAC; term=E_A_G_RHMAC_1)
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=187; variable=SL; term=10)
+step step_026_Gateway__line_187(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_RHMAC_1, E_A_G_R_1, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	iknows(pair(E_A_G_R_1, E_A_G_RHMAC_1)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 9, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 10, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R_1, E_A_G_RHMAC_1, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=188; test=equal(hash_functionn(pair(E_A_G_R, E_A_G_N5)), E_A_G_RHMAC))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=189; variable=X5; term=xor_functionn(E_A_G_R, E_A_G_V2))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=190; fact=secret(xor_functionn(E_A_G_R, E_A_G_V2), secret_X5, secret_X5_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=190; fact=contains(E_A_G_Actor, secret_X5_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=190; fact=contains(E_A_G_A, secret_X5_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=190; variable=SL; term=13)
+step step_027_Gateway__line_188(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 10, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	equal(hash_functionn(pair(E_A_G_R, E_A_G_N5)), E_A_G_RHMAC)
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_X5_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_X5_set(E_A_IID)).
+	secret(xor_functionn(E_A_G_R, E_A_G_V2), secret_X5, secret_X5_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 13, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, xor_functionn(E_A_G_R, E_A_G_V2))
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=191; test=e_A_G_x5_in_DB(E_A_G_Actor, E_A_G_X5))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=192; fact=store_Lc_DB(E_A_G_Actor, E_A_G_Lc))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=193; fact=redo_Authentification(E_A_G_A, E_A_G_Actor, E_A_G_B))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_A, secret_Lc_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=196; variable=SL; term=17)
+step step_028_Gateway__line_191(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	e_A_G_x5_in_DB(E_A_G_Actor, E_A_G_X5).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 13, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_Lc_set(E_A_IID)).
+	e_A_G_x5_in_DB(E_A_G_Actor, E_A_G_X5).
+	redo_Authentification(E_A_G_A, E_A_G_Actor, E_A_G_B).
+	secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5).
+	store_Lc_DB(E_A_G_Actor, E_A_G_Lc)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=191; test=not(e_A_G_x5_in_DB(E_A_G_Actor, E_A_G_X5)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_A, secret_Lc_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=196; variable=SL; term=17)
+step step_029_Gateway__line_191(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	not(e_A_G_x5_in_DB(E_A_G_Actor, E_A_G_X5)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 13, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_Lc_set(E_A_IID)).
+	secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=188; test=not(equal(hash_functionn(pair(E_A_G_R, E_A_G_N5)), E_A_G_RHMAC)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=196; fact=contains(E_A_G_A, secret_Lc_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=196; variable=SL; term=17)
+step step_030_Gateway__line_188(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 10, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	not(equal(hash_functionn(pair(E_A_G_R, E_A_G_N5)), E_A_G_RHMAC))
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_Lc_set(E_A_IID)).
+	secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=181; test=inf_LDmax(E_A_G_Actor, E_A_G_Lc, Lp, TD, Lmax))
+% @fresh(entity=Gateway; iid=E_A_G_IID; line=200; variable=N2; term=E_A_G_N2_1)
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=201; fact=secret(E_A_G_N2_1, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=201; fact=contains(E_A_G_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=201; fact=contains(E_A_G_A, secret_N2_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=201; fact=contains(E_A_G_B, secret_N2_set(E_A_IID)))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=202; variable=GS; term=xor_functionn(pair(E_A_G_N1, E_A_G_N2_1), E_A_G_V3))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=203; variable=HGS; term=hash_functionn(pair(E_A_G_N1, E_A_G_N2_1)))
+% @communication(entity=Gateway; iid=E_A_G_IID; line=204; sender=E_A_G_Actor; receiver=E_A_G_B; payload=pair(xor_functionn(pair(E_A_G_N1, E_A_G_N2_1), E_A_G_V3), hash_functionn(pair(E_A_G_N1, E_A_G_N2_1))); channel=regularCh; fact=iknows(pair(xor_functionn(pair(E_A_G_N1, E_A_G_N2_1), E_A_G_V3), hash_functionn(pair(E_A_G_N1, E_A_G_N2_1)))); direction=send)
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=204; variable=SL; term=23)
+step step_031_Gateway__line_181(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N2_1, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	inf_LDmax(E_A_G_Actor, E_A_G_Lc, Lp, TD, Lmax).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 3, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=[exists E_A_G_N2_1]=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_N2_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_G_B, secret_N2_set(E_A_IID)).
+	iknows(pair(xor_functionn(pair(E_A_G_N1, E_A_G_N2_1), E_A_G_V3), hash_functionn(pair(E_A_G_N1, E_A_G_N2_1)))).
+	inf_LDmax(E_A_G_Actor, E_A_G_Lc, Lp, TD, Lmax).
+	secret(E_A_G_N2_1, secret_N2, secret_N2_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 23, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, xor_functionn(pair(E_A_G_N1, E_A_G_N2_1), E_A_G_V3), hash_functionn(pair(E_A_G_N1, E_A_G_N2_1)), SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2_1, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @communication(entity=Gateway; iid=E_A_G_IID; line=205; sender=Dummy_3; receiver=E_A_G_Actor; payload=pair(SG_1, HSG_1); channel=regularCh; fact=iknows(pair(SG_1, HSG_1)); direction=receive)
+% @match(entity=Gateway; iid=E_A_G_IID; line=205; variable=HSG; term=HSG_1)
+% @match(entity=Gateway; iid=E_A_G_IID; line=205; variable=SG; term=SG_1)
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=205; variable=SL; term=24)
+step step_032_Gateway__line_205(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, GS, GU, HGS, HGU, HMAC, HSG, HSG_1, Lmax, Lp, SG, SG_1, TD) :=
+	iknows(pair(SG_1, HSG_1)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 23, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+	=>
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 24, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG_1, HSG_1, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=206; test=equal(hash_functionn(xor_functionn(SG, E_A_G_V3)), HGS))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=207; variable=GU; term=xor_functionn(pair(E_A_G_GID, pair(E_A_G_SIDj, pair(E_A_G_N2, E_A_G_N3))), E_A_G_V2))
+% @assignment(entity=Gateway; iid=E_A_G_IID; line=208; variable=HGU; term=hash_functionn(pair(E_A_G_N2, pair(E_A_G_N3, E_A_G_Sk))))
+% @communication(entity=Gateway; iid=E_A_G_IID; line=209; sender=E_A_G_Actor; receiver=E_A_G_A; payload=pair(xor_functionn(pair(E_A_G_GID, pair(E_A_G_SIDj, pair(E_A_G_N2, E_A_G_N3))), E_A_G_V2), hash_functionn(pair(E_A_G_N2, pair(E_A_G_N3, E_A_G_Sk)))); channel=regularCh; fact=iknows(pair(xor_functionn(pair(E_A_G_GID, pair(E_A_G_SIDj, pair(E_A_G_N2, E_A_G_N3))), E_A_G_V2), hash_functionn(pair(E_A_G_N2, pair(E_A_G_N3, E_A_G_Sk))))); direction=send)
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=secret(E_A_G_N1, secret_N1, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_Actor, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_A, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_B, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=secret(E_A_G_N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_A, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_B, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=contains(E_A_G_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=contains(E_A_G_A, secret_Lc_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=213; variable=SL; term=17)
+step step_033_Gateway__line_206(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 24, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	equal(hash_functionn(xor_functionn(SG, E_A_G_V3)), HGS)
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_A, secret_N1_set(E_A_IID)).
+	contains(E_A_G_A, secret_N3_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N1_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_G_B, secret_N1_set(E_A_IID)).
+	contains(E_A_G_B, secret_N3_set(E_A_IID)).
+	iknows(pair(xor_functionn(pair(E_A_G_GID, pair(E_A_G_SIDj, pair(E_A_G_N2, E_A_G_N3))), E_A_G_V2), hash_functionn(pair(E_A_G_N2, pair(E_A_G_N3, E_A_G_Sk))))).
+	secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)).
+	secret(E_A_G_N1, secret_N1, secret_N1_set(E_A_IID)).
+	secret(E_A_G_N3, secret_N3, secret_N3_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, xor_functionn(pair(E_A_G_GID, pair(E_A_G_SIDj, pair(E_A_G_N2, E_A_G_N3))), E_A_G_V2), hash_functionn(pair(E_A_G_N2, pair(E_A_G_N3, E_A_G_Sk))), GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=206; test=not(equal(hash_functionn(xor_functionn(SG, E_A_G_V3)), HGS)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=secret(E_A_G_N1, secret_N1, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_Actor, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_A, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=211; fact=contains(E_A_G_B, secret_N1_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=secret(E_A_G_N3, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_A, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=212; fact=contains(E_A_G_B, secret_N3_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=contains(E_A_G_Actor, secret_Lc_set(E_A_IID)))
+% @introduce(entity=Gateway; iid=E_A_G_IID; line=213; fact=contains(E_A_G_A, secret_Lc_set(E_A_IID)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=213; variable=SL; term=17)
+step step_034_Gateway__line_206(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, E_A_IID, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	child(E_A_IID, E_A_G_IID).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 24, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	not(equal(hash_functionn(xor_functionn(SG, E_A_G_V3)), HGS))
+	=>
+	child(E_A_IID, E_A_G_IID).
+	contains(E_A_G_A, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_A, secret_N1_set(E_A_IID)).
+	contains(E_A_G_A, secret_N3_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_Lc_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N1_set(E_A_IID)).
+	contains(E_A_G_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_G_B, secret_N1_set(E_A_IID)).
+	contains(E_A_G_B, secret_N3_set(E_A_IID)).
+	secret(E_A_G_Lc, secret_Lc, secret_Lc_set(E_A_IID)).
+	secret(E_A_G_N1, secret_N1, secret_N1_set(E_A_IID)).
+	secret(E_A_G_N3, secret_N3, secret_N3_set(E_A_IID)).
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @guard(entity=Gateway; iid=E_A_G_IID; line=180; test=not(equal(hash_functionn(xor_functionn(E_A_G_UG, E_A_G_V2)), E_A_G_HUG)))
+% @step_label(entity=Gateway; iid=E_A_G_IID; line=180; variable=SL; term=17)
+step step_035_Gateway__line_180(C, E_A_G_A, E_A_G_Actor, E_A_G_B, E_A_G_DIDui, E_A_G_GID, E_A_G_HUG, E_A_G_IID, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_N5, E_A_G_R, E_A_G_RHMAC, E_A_G_SIDj, E_A_G_Sk, E_A_G_UG, E_A_G_V2, E_A_G_V3, E_A_G_X5, GS, GU, HGS, HGU, HMAC, HSG, Lmax, Lp, SG, TD) :=
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 2, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5) &
+	not(equal(hash_functionn(xor_functionn(E_A_G_UG, E_A_G_V2)), E_A_G_HUG))
+	=>
+	state_Gateway(E_A_G_Actor, E_A_G_IID, 17, E_A_G_A, E_A_G_B, E_A_G_GID, E_A_G_SIDj, E_A_G_DIDui, E_A_G_UG, E_A_G_HUG, GU, HGU, GS, HGS, SG, HSG, E_A_G_Lc, E_A_G_N1, E_A_G_N2, E_A_G_N3, E_A_G_V2, E_A_G_V3, E_A_G_Sk, Lp, TD, Lmax, E_A_G_N5, C, HMAC, E_A_G_R, E_A_G_RHMAC, E_A_G_X5)
+
+% @communication(entity=E_A_Bob; iid=E_A_B_IID; line=227; sender=Dummy_4; receiver=E_A_B_Actor; payload=pair(E_A_B_GS_1, E_A_B_HGS_1); channel=regularCh; fact=iknows(pair(E_A_B_GS_1, E_A_B_HGS_1)); direction=receive)
+% @match(entity=E_A_Bob; iid=E_A_B_IID; line=227; variable=GS; term=E_A_B_GS_1)
+% @match(entity=E_A_Bob; iid=E_A_B_IID; line=227; variable=HGS; term=E_A_B_HGS_1)
+% @step_label(entity=Bob; iid=E_A_B_IID; line=227; variable=SL; term=2)
+step step_036_E_A_Bob__line_227(E_A_B_A, E_A_B_Actor, E_A_B_GS, E_A_B_GS_1, E_A_B_GWN, E_A_B_HGS, E_A_B_HGS_1, E_A_B_HSG, E_A_B_IID, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_SG, E_A_B_SIDj, E_A_B_Sk, E_A_B_V3) :=
+	iknows(pair(E_A_B_GS_1, E_A_B_HGS_1)).
+	not(dishonest(E_A_B_Actor)).
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 1, E_A_B_A, E_A_B_GWN, E_A_B_GS, E_A_B_HGS, E_A_B_SIDj, E_A_B_V3, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_Sk, E_A_B_SG, E_A_B_HSG)
+	=>
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 2, E_A_B_A, E_A_B_GWN, E_A_B_GS_1, E_A_B_HGS_1, E_A_B_SIDj, E_A_B_V3, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_Sk, E_A_B_SG, E_A_B_HSG)
+
+% @guard(entity=E_A_Bob; iid=E_A_B_IID; line=228; test=equal(hash_functionn(xor_functionn(E_A_B_GS, E_A_B_V3)), E_A_B_HGS))
+% @assignment(entity=E_A_Bob; iid=E_A_B_IID; line=229; variable=N1; term=recupere_N1(E_A_B_Actor, E_A_B_GS))
+% @assignment(entity=E_A_Bob; iid=E_A_B_IID; line=230; variable=N2; term=e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS))
+% @fresh(entity=E_A_Bob; iid=E_A_B_IID; line=231; variable=N3; term=E_A_B_N3_1)
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=232; fact=secret(E_A_B_N3_1, secret_N3, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=232; fact=contains(E_A_B_Actor, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=232; fact=contains(E_A_B_A, secret_N3_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=232; fact=contains(E_A_B_GWN, secret_N3_set(E_A_IID)))
+% @assignment(entity=E_A_Bob; iid=E_A_B_IID; line=233; variable=Sk; term=hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))))
+% @assignment(entity=E_A_Bob; iid=E_A_B_IID; line=234; variable=SG; term=xor_functionn(pair(E_A_B_SIDj, E_A_B_N3_1), E_A_B_V3))
+% @assignment(entity=E_A_Bob; iid=E_A_B_IID; line=235; variable=HSG; term=hash_functionn(pair(E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))))))
+% @communication(entity=E_A_Bob; iid=E_A_B_IID; line=236; sender=E_A_B_Actor; receiver=E_A_B_GWN; payload=pair(xor_functionn(pair(E_A_B_SIDj, E_A_B_N3_1), E_A_B_V3), hash_functionn(pair(E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1)))))); channel=regularCh; fact=iknows(pair(xor_functionn(pair(E_A_B_SIDj, E_A_B_N3_1), E_A_B_V3), hash_functionn(pair(E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))))))); direction=send)
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=secret(recupere_N1(E_A_B_Actor, E_A_B_GS), secret_N1, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_Actor, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_A, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_GWN, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=secret(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_A, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_GWN, secret_N2_set(E_A_IID)))
+% @step_label(entity=Bob; iid=E_A_B_IID; line=239; variable=SL; term=13)
+step step_037_E_A_Bob__line_228(E_A_B_A, E_A_B_Actor, E_A_B_GS, E_A_B_GWN, E_A_B_HGS, E_A_B_HSG, E_A_B_IID, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_N3_1, E_A_B_SG, E_A_B_SIDj, E_A_B_Sk, E_A_B_V3, E_A_IID) :=
+	child(E_A_IID, E_A_B_IID).
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 2, E_A_B_A, E_A_B_GWN, E_A_B_GS, E_A_B_HGS, E_A_B_SIDj, E_A_B_V3, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_Sk, E_A_B_SG, E_A_B_HSG) &
+	equal(hash_functionn(xor_functionn(E_A_B_GS, E_A_B_V3)), E_A_B_HGS)
+	=[exists E_A_B_N3_1]=>
+	child(E_A_IID, E_A_B_IID).
+	contains(E_A_B_A, secret_N1_set(E_A_IID)).
+	contains(E_A_B_A, secret_N2_set(E_A_IID)).
+	contains(E_A_B_A, secret_N3_set(E_A_IID)).
+	contains(E_A_B_Actor, secret_N1_set(E_A_IID)).
+	contains(E_A_B_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_B_Actor, secret_N3_set(E_A_IID)).
+	contains(E_A_B_GWN, secret_N1_set(E_A_IID)).
+	contains(E_A_B_GWN, secret_N2_set(E_A_IID)).
+	contains(E_A_B_GWN, secret_N3_set(E_A_IID)).
+	iknows(pair(xor_functionn(pair(E_A_B_SIDj, E_A_B_N3_1), E_A_B_V3), hash_functionn(pair(E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))))))).
+	secret(E_A_B_N3_1, secret_N3, secret_N3_set(E_A_IID)).
+	secret(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), secret_N2, secret_N2_set(E_A_IID)).
+	secret(recupere_N1(E_A_B_Actor, E_A_B_GS), secret_N1, secret_N1_set(E_A_IID)).
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 13, E_A_B_A, E_A_B_GWN, E_A_B_GS, E_A_B_HGS, E_A_B_SIDj, E_A_B_V3, recupere_N1(E_A_B_Actor, E_A_B_GS), e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))), xor_functionn(pair(E_A_B_SIDj, E_A_B_N3_1), E_A_B_V3), hash_functionn(pair(E_A_B_N3_1, hash_functionn(pair(recupere_N1(E_A_B_Actor, E_A_B_GS), pair(e_A_B_recupere_N2(E_A_B_Actor, E_A_B_GS), E_A_B_N3_1))))))
+
+% @guard(entity=E_A_Bob; iid=E_A_B_IID; line=228; test=not(equal(hash_functionn(xor_functionn(E_A_B_GS, E_A_B_V3)), E_A_B_HGS)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=secret(E_A_B_N1, secret_N1, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_Actor, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_A, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=238; fact=contains(E_A_B_GWN, secret_N1_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=secret(E_A_B_N2, secret_N2, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_Actor, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_A, secret_N2_set(E_A_IID)))
+% @introduce(entity=E_A_Bob; iid=E_A_B_IID; line=239; fact=contains(E_A_B_GWN, secret_N2_set(E_A_IID)))
+% @step_label(entity=Bob; iid=E_A_B_IID; line=239; variable=SL; term=13)
+step step_038_E_A_Bob__line_228(E_A_B_A, E_A_B_Actor, E_A_B_GS, E_A_B_GWN, E_A_B_HGS, E_A_B_HSG, E_A_B_IID, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_SG, E_A_B_SIDj, E_A_B_Sk, E_A_B_V3, E_A_IID) :=
+	child(E_A_IID, E_A_B_IID).
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 2, E_A_B_A, E_A_B_GWN, E_A_B_GS, E_A_B_HGS, E_A_B_SIDj, E_A_B_V3, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_Sk, E_A_B_SG, E_A_B_HSG) &
+	not(equal(hash_functionn(xor_functionn(E_A_B_GS, E_A_B_V3)), E_A_B_HGS))
+	=>
+	child(E_A_IID, E_A_B_IID).
+	contains(E_A_B_A, secret_N1_set(E_A_IID)).
+	contains(E_A_B_A, secret_N2_set(E_A_IID)).
+	contains(E_A_B_Actor, secret_N1_set(E_A_IID)).
+	contains(E_A_B_Actor, secret_N2_set(E_A_IID)).
+	contains(E_A_B_GWN, secret_N1_set(E_A_IID)).
+	contains(E_A_B_GWN, secret_N2_set(E_A_IID)).
+	secret(E_A_B_N1, secret_N1, secret_N1_set(E_A_IID)).
+	secret(E_A_B_N2, secret_N2, secret_N2_set(E_A_IID)).
+	state_E_A_Bob(E_A_B_Actor, E_A_B_IID, 13, E_A_B_A, E_A_B_GWN, E_A_B_GS, E_A_B_HGS, E_A_B_SIDj, E_A_B_V3, E_A_B_N1, E_A_B_N2, E_A_B_N3, E_A_B_Sk, E_A_B_SG, E_A_B_HSG)
+
+% @new_instance(entity=ChangePW_without_RA; iid=E_CPWwRA_IID; line=292; new_entity=Alice; Actor=E_CPWwRA_A; IID=IID_11; SL=1; GWN=E_CPWwRA_GWN; B=E_CPWwRA_B; PWi=dummy_message; IDUi=dummy_message; GID=dummy_message; SIDj=dummy_message; TIDUi=dummy_message; V1=dummy_message; V2=dummy_message; V3=dummy_message; Sk=dummy_symmetric_key)
+% @new_instance(entity=ChangePW_without_RA; iid=E_CPWwRA_IID; line=293; new_entity=GWN; Actor=E_CPWwRA_GWN; IID=IID_12; SL=1; A=E_CPWwRA_A; TIDUi=dummy_message; V2=dummy_message; V3=dummy_message; Sk=dummy_symmetric_key)
+% @new_instance(entity=ChangePW_without_RA; iid=E_CPWwRA_IID; line=294; new_entity=Bob; Actor=E_CPWwRA_B; IID=IID_13; SL=1; A=E_CPWwRA_A; V3=dummy_message; Sk=dummy_symmetric_key)
+% @step_label(entity=ChangePW_without_RA; iid=E_CPWwRA_IID; line=294; variable=SL; term=4)
+step step_039_ChangePW_without_RA__line_292(E_CPWwRA_A, E_CPWwRA_Actor, E_CPWwRA_B, E_CPWwRA_GWN, E_CPWwRA_IID, IID_11, IID_12, IID_13) :=
+	not(dishonest(E_CPWwRA_Actor)).
+	state_ChangePW_without_RA(E_CPWwRA_Actor, E_CPWwRA_IID, 1, E_CPWwRA_A, E_CPWwRA_GWN, E_CPWwRA_B)
+	=[exists IID_11, IID_12, IID_13]=>
+	child(E_CPWwRA_IID, IID_11).
+	child(E_CPWwRA_IID, IID_12).
+	child(E_CPWwRA_IID, IID_13).
+	state_ChangePW_without_RA(E_CPWwRA_Actor, E_CPWwRA_IID, 4, E_CPWwRA_A, E_CPWwRA_GWN, E_CPWwRA_B).
+	state_E_CPWwRA_Alice(E_CPWwRA_A, IID_11, 1, E_CPWwRA_GWN, E_CPWwRA_B, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_message, dummy_symmetric_key).
+	state_E_CPWwRA_Bob(E_CPWwRA_B, IID_13, 1, E_CPWwRA_A, dummy_message, dummy_symmetric_key).
+	state_E_CPWwRA_GWN(E_CPWwRA_GWN, IID_12, 1, E_CPWwRA_A, dummy_message, dummy_message, dummy_message, dummy_symmetric_key)
+
+% @assignment(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=259; variable=PWi; term=choose_anathor_password(E_CPWwRA_A_Actor))
+% @assignment(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=260; variable=V1; term=hash_functionn(pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor))))
+% @introduce(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=261; fact=e_CPWwRA_A_store_V1(hash_functionn(pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))
+% @assignment(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=262; variable=V2; term=hash_functionn(pair(E_CPWwRA_A_GID, xor_functionn(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))
+% @assignment(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=263; variable=V3; term=hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))
+% @communication(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=264; sender=E_CPWwRA_A_Actor; receiver=E_CPWwRA_A_GWN; payload=scrypt(E_CPWwRA_A_Sk, pair(E_CPWwRA_A_TIDUi, pair(hash_functionn(pair(E_CPWwRA_A_GID, xor_functionn(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))), hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor))))))); channel=regularCh; fact=iknows(scrypt(E_CPWwRA_A_Sk, pair(E_CPWwRA_A_TIDUi, pair(hash_functionn(pair(E_CPWwRA_A_GID, xor_functionn(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))), hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))))); direction=send)
+% @communication(entity=E_CPWwRA_Alice; iid=E_CPWwRA_A_IID; line=265; sender=E_CPWwRA_A_Actor; receiver=E_CPWwRA_A_B; payload=scrypt(E_CPWwRA_A_Sk, hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor))))); channel=regularCh; fact=iknows(scrypt(E_CPWwRA_A_Sk, hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))); direction=send)
+% @step_label(entity=Alice; iid=E_CPWwRA_A_IID; line=265; variable=SL; term=8)
+step step_040_E_CPWwRA_Alice__line_259(E_CPWwRA_A_Actor, E_CPWwRA_A_B, E_CPWwRA_A_GID, E_CPWwRA_A_GWN, E_CPWwRA_A_IDUi, E_CPWwRA_A_IID, E_CPWwRA_A_PWi, E_CPWwRA_A_SIDj, E_CPWwRA_A_Sk, E_CPWwRA_A_TIDUi, E_CPWwRA_A_V1, E_CPWwRA_A_V2, E_CPWwRA_A_V3) :=
+	not(dishonest(E_CPWwRA_A_Actor)).
+	state_E_CPWwRA_Alice(E_CPWwRA_A_Actor, E_CPWwRA_A_IID, 1, E_CPWwRA_A_GWN, E_CPWwRA_A_B, E_CPWwRA_A_PWi, E_CPWwRA_A_IDUi, E_CPWwRA_A_GID, E_CPWwRA_A_SIDj, E_CPWwRA_A_TIDUi, E_CPWwRA_A_V1, E_CPWwRA_A_V2, E_CPWwRA_A_V3, E_CPWwRA_A_Sk)
+	=>
+	e_CPWwRA_A_store_V1(hash_functionn(pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))).
+	iknows(scrypt(E_CPWwRA_A_Sk, hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))).
+	iknows(scrypt(E_CPWwRA_A_Sk, pair(E_CPWwRA_A_TIDUi, pair(hash_functionn(pair(E_CPWwRA_A_GID, xor_functionn(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))), hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))))))).
+	state_E_CPWwRA_Alice(E_CPWwRA_A_Actor, E_CPWwRA_A_IID, 8, E_CPWwRA_A_GWN, E_CPWwRA_A_B, choose_anathor_password(E_CPWwRA_A_Actor), E_CPWwRA_A_IDUi, E_CPWwRA_A_GID, E_CPWwRA_A_SIDj, E_CPWwRA_A_TIDUi, hash_functionn(pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor))), hash_functionn(pair(E_CPWwRA_A_GID, xor_functionn(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))), hash_functionn(xor_functionn(E_CPWwRA_A_GID, pair(E_CPWwRA_A_IDUi, choose_anathor_password(E_CPWwRA_A_Actor)))), E_CPWwRA_A_Sk)
+
+% @communication(entity=E_CPWwRA_GWN; iid=E_CPWwRA_GWN_IID; line=276; sender=Dummy_5; receiver=E_CPWwRA_GWN_Actor; payload=scrypt(E_CPWwRA_GWN_Sk, pair(E_CPWwRA_GWN_TIDUi_1, pair(E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1))); channel=regularCh; fact=iknows(scrypt(E_CPWwRA_GWN_Sk, pair(E_CPWwRA_GWN_TIDUi_1, pair(E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1)))); direction=receive)
+% @match(entity=E_CPWwRA_GWN; iid=E_CPWwRA_GWN_IID; line=276; variable=TIDUi; term=E_CPWwRA_GWN_TIDUi_1)
+% @match(entity=E_CPWwRA_GWN; iid=E_CPWwRA_GWN_IID; line=276; variable=V2; term=E_CPWwRA_GWN_V2_1)
+% @match(entity=E_CPWwRA_GWN; iid=E_CPWwRA_GWN_IID; line=276; variable=V3; term=E_CPWwRA_GWN_V3_1)
+% @introduce(entity=E_CPWwRA_GWN; iid=E_CPWwRA_GWN_IID; line=277; fact=update_tid_V2_V3(E_CPWwRA_GWN_Actor, E_CPWwRA_GWN_TIDUi_1, E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1))
+% @step_label(entity=GWN; iid=E_CPWwRA_GWN_IID; line=277; variable=SL; term=3)
+step step_041_E_CPWwRA_GWN__line_276(E_CPWwRA_GWN_A, E_CPWwRA_GWN_Actor, E_CPWwRA_GWN_IID, E_CPWwRA_GWN_Sk, E_CPWwRA_GWN_TIDUi, E_CPWwRA_GWN_TIDUi_1, E_CPWwRA_GWN_V2, E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3, E_CPWwRA_GWN_V3_1) :=
+	iknows(scrypt(E_CPWwRA_GWN_Sk, pair(E_CPWwRA_GWN_TIDUi_1, pair(E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1)))).
+	not(dishonest(E_CPWwRA_GWN_Actor)).
+	state_E_CPWwRA_GWN(E_CPWwRA_GWN_Actor, E_CPWwRA_GWN_IID, 1, E_CPWwRA_GWN_A, E_CPWwRA_GWN_TIDUi, E_CPWwRA_GWN_V2, E_CPWwRA_GWN_V3, E_CPWwRA_GWN_Sk)
+	=>
+	state_E_CPWwRA_GWN(E_CPWwRA_GWN_Actor, E_CPWwRA_GWN_IID, 3, E_CPWwRA_GWN_A, E_CPWwRA_GWN_TIDUi_1, E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1, E_CPWwRA_GWN_Sk).
+	update_tid_V2_V3(E_CPWwRA_GWN_Actor, E_CPWwRA_GWN_TIDUi_1, E_CPWwRA_GWN_V2_1, E_CPWwRA_GWN_V3_1)
+
+% @communication(entity=E_CPWwRA_Bob; iid=E_CPWwRA_B_IID; line=287; sender=Dummy_6; receiver=E_CPWwRA_B_Actor; payload=scrypt(E_CPWwRA_B_Sk, E_CPWwRA_B_V3_1); channel=regularCh; fact=iknows(scrypt(E_CPWwRA_B_Sk, E_CPWwRA_B_V3_1)); direction=receive)
+% @match(entity=E_CPWwRA_Bob; iid=E_CPWwRA_B_IID; line=287; variable=V3; term=E_CPWwRA_B_V3_1)
+% @introduce(entity=E_CPWwRA_Bob; iid=E_CPWwRA_B_IID; line=288; fact=e_CPWwRA_B_store_V3(E_CPWwRA_B_Actor, E_CPWwRA_B_V3_1))
+% @step_label(entity=Bob; iid=E_CPWwRA_B_IID; line=288; variable=SL; term=3)
+step step_042_E_CPWwRA_Bob__line_287(E_CPWwRA_B_A, E_CPWwRA_B_Actor, E_CPWwRA_B_IID, E_CPWwRA_B_Sk, E_CPWwRA_B_V3, E_CPWwRA_B_V3_1) :=
+	iknows(scrypt(E_CPWwRA_B_Sk, E_CPWwRA_B_V3_1)).
+	not(dishonest(E_CPWwRA_B_Actor)).
+	state_E_CPWwRA_Bob(E_CPWwRA_B_Actor, E_CPWwRA_B_IID, 1, E_CPWwRA_B_A, E_CPWwRA_B_V3, E_CPWwRA_B_Sk)
+	=>
+	e_CPWwRA_B_store_V3(E_CPWwRA_B_Actor, E_CPWwRA_B_V3_1).
+	state_E_CPWwRA_Bob(E_CPWwRA_B_Actor, E_CPWwRA_B_IID, 3, E_CPWwRA_B_A, E_CPWwRA_B_V3_1, E_CPWwRA_B_Sk)
+
+section goals:
+
+% @goal(name=secret_ID; line=25; Knowers=Knowers; Msg=Msg)
+attack_state secret_ID(Knowers, Msg) :=
+	iknows(Msg).
+	not(contains(i, Knowers)).
+	secret(Msg, secret_ID, Knowers)
+
+% @goal(name=secret_Kgr; line=67; Knowers=E_sK_Knowers_; Msg=E_sK_Msg_)
+attack_state secret_Kgr(E_sK_Knowers_, E_sK_Msg_) :=
+	iknows(E_sK_Msg_).
+	not(contains(i, E_sK_Knowers_)).
+	secret(E_sK_Msg_, secret_Kgr, E_sK_Knowers_)
+
+% @goal(name=secret_Ksr; line=68; Knowers=E_sK_Knowers__; Msg=E_sK_Msg__)
+attack_state secret_Ksr(E_sK_Knowers__, E_sK_Msg__) :=
+	iknows(E_sK_Msg__).
+	not(contains(i, E_sK_Knowers__)).
+	secret(E_sK_Msg__, secret_Ksr, E_sK_Knowers__)
+
+% @goal(name=secret_Kur; line=37; Knowers=E_sK_Knowers; Msg=E_sK_Msg)
+attack_state secret_Kur(E_sK_Knowers, E_sK_Msg) :=
+	iknows(E_sK_Msg).
+	not(contains(i, E_sK_Knowers)).
+	secret(E_sK_Msg, secret_Kur, E_sK_Knowers)
+
+% @goal(name=secret_Lc; line=133; Knowers=E_sL_Knowers; Msg=E_sL_Msg)
+attack_state secret_Lc(E_sL_Knowers, E_sL_Msg) :=
+	iknows(E_sL_Msg).
+	not(contains(i, E_sL_Knowers)).
+	secret(E_sL_Msg, secret_Lc, E_sL_Knowers)
+
+% @goal(name=secret_N1; line=131; Knowers=E_sN1_Knowers; Msg=E_sN1_Msg)
+attack_state secret_N1(E_sN1_Knowers, E_sN1_Msg) :=
+	iknows(E_sN1_Msg).
+	not(contains(i, E_sN1_Knowers)).
+	secret(E_sN1_Msg, secret_N1, E_sN1_Knowers)
+
+% @goal(name=secret_N2; line=161; Knowers=E_sN2_Knowers; Msg=E_sN2_Msg)
+attack_state secret_N2(E_sN2_Knowers, E_sN2_Msg) :=
+	iknows(E_sN2_Msg).
+	not(contains(i, E_sN2_Knowers)).
+	secret(E_sN2_Msg, secret_N2, E_sN2_Knowers)
+
+% @goal(name=secret_N3; line=162; Knowers=E_sN3_Knowers; Msg=E_sN3_Msg)
+attack_state secret_N3(E_sN3_Knowers, E_sN3_Msg) :=
+	iknows(E_sN3_Msg).
+	not(contains(i, E_sN3_Knowers)).
+	secret(E_sN3_Msg, secret_N3, E_sN3_Knowers)
+
+% @goal(name=secret_N5; line=150; Knowers=E_sN5_Knowers; Msg=E_sN5_Msg)
+attack_state secret_N5(E_sN5_Knowers, E_sN5_Msg) :=
+	iknows(E_sN5_Msg).
+	not(contains(i, E_sN5_Knowers)).
+	secret(E_sN5_Msg, secret_N5, E_sN5_Knowers)
+
+% @goal(name=secret_PW; line=27; Knowers=E_sPW_Knowers; Msg=E_sPW_Msg)
+attack_state secret_PW(E_sPW_Knowers, E_sPW_Msg) :=
+	iknows(E_sPW_Msg).
+	not(contains(i, E_sPW_Knowers)).
+	secret(E_sPW_Msg, secret_PW, E_sPW_Knowers)
+
+% @goal(name=secret_TIDUi; line=36; Knowers=E_sTIDU_Knowers; Msg=E_sTIDU_Msg)
+attack_state secret_TIDUi(E_sTIDU_Knowers, E_sTIDU_Msg) :=
+	iknows(E_sTIDU_Msg).
+	not(contains(i, E_sTIDU_Knowers)).
+	secret(E_sTIDU_Msg, secret_TIDUi, E_sTIDU_Knowers)
+
+% @goal(name=secret_X5; line=146; Knowers=E_sX5_Knowers; Msg=E_sX5_Msg)
+attack_state secret_X5(E_sX5_Knowers, E_sX5_Msg) :=
+	iknows(E_sX5_Msg).
+	not(contains(i, E_sX5_Knowers)).
+	secret(E_sX5_Msg, secret_X5, E_sX5_Knowers)

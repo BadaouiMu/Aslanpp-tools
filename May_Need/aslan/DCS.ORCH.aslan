@@ -1,0 +1,530 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Digital Contract Signing
+%%  - orchestration problem
+%%  - Client-style input
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Modelers: 	MEKKI Mohamed Anis,
+%%           	AVANESOV Tigran
+%% Institution: INRIA
+%% Date: 2008 -- 2010
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Scenario Info
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Refer to DCS Case study proposed by OpenTrust.
+%% Orchestration problem: construct Security Server. 
+%% In the role of the Client: Business Portal.
+%% 
+%%
+%% Available services: 
+%% 			TimeStamper, 		put time stamps
+%% 			PKI, 				Public Key Infrastructure. 
+%%                 				Possesses and return information about CRL (certificate revocation list)
+%%
+%% 			Archiver,			Third party storage (archiving) service
+%%			AssertionProvider,	internal facility for the Security Server
+%% 
+%% Orchestration functionality:
+%%			OrchestrationGoal,	Initial knowledge of Security Server.
+%%								The rest is to be found.
+%%			OrchestrationClient,
+%%								Business Portal, a client which requests must be satisfied.
+%%  
+%%  
+%%  
+%% To see the MSC of the expected communications, 
+%%  use http://www.websequencediagrams.com/ 
+%%  and copy-paste the following text 
+%%  (previosly remove trailing '%%%'):
+%%     
+%% ------------ BEGIN MSC -------------
+%%%   participant BP
+%%%   participant SS
+%%%   participant TS
+%%%   participant PKI
+%%%   participant ARC
+%%%
+%%%   BP->SS: CreateRecordRequest
+%%%   SS->BP: CreateRecordResponse
+%%%   BP->SS: PrepareSignatureRequest[1]
+%%%   SS->BP: PrepareSignatureResponse[1]
+%%%   BP->SS: AddSignatureRequest[1]
+%%%   SS->SS: CheckSignature[1]
+%%%   SS->BP: AddSignatureResponse[1]
+%%%   BP->SS: TimeStampRequest[1]
+%%%   SS->TS: TS:TimeStampRequest[1]
+%%%   TS->SS: TS:TimeStampResponse[1]
+%%%   SS->SS: CheckTimeStamp[1]
+%%%   SS->BP: TimeStampResponse[1]
+%%%   BP->SS: CheckCertificateRequest[1]
+%%%   SS->PKI: PKI:CheckCertificateRequest[1]
+%%%   PKI->SS: PKI:CheckCertificateResponse[1]
+%%%   SS->SS: CheckCertificate[1]
+%%%   SS->BP: CheckCertificateResponse[1]
+%%%   BP->SS: PrepareSignatureRequest[2]
+%%%   SS->BP: PrepareSignatureResponse[2]
+%%%   BP->SS: AddSignatureRequest[2]
+%%%   SS->SS: CheckSignature[2]
+%%%   SS->BP: AddSignatureResponse[2]
+%%%   BP->SS: TimeStampRequest[2]
+%%%   SS->TS: TS:TimeStampRequest[2]
+%%%   TS->SS: TS:TimeStampResponse[2]
+%%%   SS->SS: CheckTimeStamp[2]
+%%%   SS->BP: TimeStampResponse[2]
+%%%   BP->SS: CheckCertificateRequest[2]
+%%%   SS->PKI: PKI:CheckCertificateRequest[2]
+%%%   PKI->SS: PKI:CheckCertificateResponse[2]
+%%%   SS->SS: CheckCertificate[2]
+%%%   SS->BP: CheckCertificateResponse[2]
+%%%   BP->SS: ArchiveRecordRequest
+%%%   SS->ARC: ARC:ArchiveRequest
+%%%   ARC->SS: ARC:ArchiveResponse
+%%%   SS->BP: ArchiveRecordResponse
+%%%   
+%% ------------ END MSC -------------
+%%
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+section signature:
+
+	state_OrchestrationGoal: agent * public_key * public_key * agent * agent * agent * agent * agent * agent * agent * public_key * public_key * symmetric_key * symmetric_key * text * text * hash_func * bool * bool * protocol_id * protocol_id * protocol_id * protocol_id -> fact	
+	state_OrchestrationClient: agent * nat * nat * agent * agent * agent * agent * agent * public_key * public_key * symmetric_key * symmetric_key * public_key * public_key * hash_func  -> fact
+	state_assertionsProvider: agent * nat * nat * public_key * agent * agent * public_key * public_key * hash_func * message * agent * public_key * message * message * agent * public_key * bool -> fact
+	state_arc: agent * nat * nat * public_key * agent * agent * agent * symmetric_key * public_key * public_key * hash_func * set(message) * message * message * agent * public_key * agent * public_key * message * message * message * message * message * message -> fact
+	state_pki: agent * nat * nat * public_key * hash_func * set(pair(agent, public_key)) * agent * public_key -> fact
+	state_timestamper: agent * nat * nat * public_key * hash_func * text * message -> fact
+	keepsecret: message -> fact
+
+section types:
+	
+	% tokens used in assertions
+	% "Signature is OK"
+	sigOK : protocol_id
+	% "Message was timestamped"
+	tsOK  : protocol_id
+	% "Certificate is valid, i.e. not revoked"
+	certOK: protocol_id
+	% "A contract was archived"
+	arcOK : protocol_id
+
+	% Initial dummy values of variables
+	dummy_set		: set(message)
+	dummy_nonce		: text
+	dummy_msg		: message
+	dummy_pk		: public_key
+	dummy_bool		: bool
+	dummy_agent		: agent
+
+	Dummy	: protocol_id
+
+	% A token which helps to indicate a successful finishing
+	finish	: protocol_id
+
+
+	% A storage of the Archiver
+	Archive		: set(message)
+	% its init value
+	Dummy_Archive		: set(message)
+
+	% A key shared between Security Server (SS) and Archiver (Arc)
+	KSSARC		: symmetric_key
+	kssarc		: symmetric_key
+
+	% A key shared between Business Portal and SS
+	KBPSS		: symmetric_key
+	kbpss		: symmetric_key
+
+	% PKI public key
+	KPKI		: public_key
+	kpki		: public_key
+
+	% TS public key
+	KTS		: public_key
+	kts		: public_key
+
+	%Text of a contract to sign
+	contract		: text
+
+	% a session ID for the scenario:
+	% this value helps to identify a session 
+	% (if there were several).
+	% It appears almost in all messages
+	id		: text
+
+	% Signature policies for the 1st and the 2nd signers
+	signaturePolicy1		: text
+	signaturePolicy2		: text
+
+	% Hash function
+	Hash		: hash_func
+	md5		: hash_func
+
+	% Session ID 
+	% (needed if one role (set of transitions) used several times)
+	SID		: nat
+
+
+	% Current time (for the Timestamper)
+	Dummy_Time		: text
+	Time		: text
+
+
+	% For AP (assertion provider)
+	% input for checking signature
+	% ...Msg --- message that must be signed
+	Dummy_CheckSigMsg		: message
+	CheckSigMsg		: message
+	% with public key:
+	Dummy_CheckSigKey		: public_key
+	CheckSigKey		: public_key
+	% (this pubkey is) of agent:
+	CheckSigAgent		: agent
+	Dummy_CheckSigAgent		: agent
+
+
+	% For AP (assertion provider)
+	% input for checking whether 
+	% certificate is not revoked
+	% Agent
+	CheckCertAgent		: agent
+	Dummy_CheckCertAgent		: agent
+	% and his Public Key
+	CheckCertKey		: public_key
+	Dummy_CheckCertKey		: public_key
+	% variable for the result
+	% not used in this spec.
+	CheckCertRes		: bool
+	Dummy_CheckCertRes		: bool
+	
+
+	% no comments
+	true		: bool
+	false		: bool
+
+	% agent playing a client
+	sscl		: agent
+	SSCl		: agent
+	% 
+	orchgoal		: agent
+
+	% agent playing TimeStamper
+	ts		: agent
+	TS		: agent
+
+	% agent playing Security Server
+	ss		: agent
+	SS		: agent
+
+	% agent playing Business Portal
+	bp		: agent
+	BP		: agent
+
+	% agent playing Assertion Provider
+	ap		: agent
+	AP		: agent
+
+	% Public key of AP
+	KAP		: public_key
+	kap		: public_key
+
+
+
+	% agent playing Archiver
+	arc		: agent
+	ARC		: agent
+	
+	% ARC's public key
+	KARC	: public_key
+	karc	: public_key
+
+	% agent playing PKI 
+	pki		: agent
+	PKI		: agent
+
+	% intruder/composer...
+	i		: agent
+
+	% The first signer
+	signer1		: agent
+	% His public key
+	pubKey1		: public_key
+
+	%The second signer
+	signer2		: agent
+	% His public key
+	pubKey2		: public_key
+
+	% some user and his pulic key  
+	user1		: agent
+	key1		: public_key
+	% another user and his pulic key  
+	user2		: agent
+	key2		: public_key
+
+	% Certificate revocation lists 
+	% (user1/user2 will be there inside...)
+	crl		: set(pair(agent, public_key))
+	CRL		: set(pair(agent, public_key))
+
+	% Variables for Archiver's input: 
+	% two signers and theirs public keys
+	InSigner2		: agent
+	InSigner1		: agent
+	InPubKeySigner2		: public_key
+	InPubKeySigner1		: public_key
+	Dummy_InPubKeySigner2		: public_key
+	Dummy_InPubKeySigner1		: public_key
+	Dummy_InSigner2		: agent
+	Dummy_InSigner1		: agent
+
+	% Archiver's Input: contract
+	Dummy_InContract		: message
+	InContract		: message
+
+	% Archiver's input: policies
+	% Signature policies
+	InSigPolicy2		: message
+	InSigPolicy1		: message
+	Dummy_InSigPolicy2		: message
+	Dummy_InSigPolicy1		: message
+
+	% Archiver's input: time 
+	% Time of timestamps
+	InTime2		: message
+	InTime1		: message
+	Dummy_InTime2		: message
+	Dummy_InTime1		: message
+
+	% Archiver's input: revokation status 
+	% Was the certificate revoked?
+	% (normally, no)
+	Dummy_InRevoked2		: message
+	Dummy_InRevoked1		: message
+	InRevoked2		: message
+	InRevoked1		: message
+
+	% Archiver's input: revokation status 
+	% Archiver's call(invokation) identifier
+	InID		: message
+	Dummy_InID		: message
+
+
+	% A message to be timestamped
+	% in the input of TimeStamper
+	% and in the Assertion Provider
+	% for generating tsOK
+	MsgToTimestamp		: message
+	Dummy_MsgToTimestamp		: message
+
+	CheckTime		: message
+	Dummy_CheckTime		: message
+
+section inits:
+	initial_state init1:=
+		% Initial knowledge for the intruder
+		iknows(i).
+		iknows(pair(arcOK, pair(certOK, pair(sigOK, pair(tsOK, pair(true, false)))))).
+		iknows(pair(karc,pair(kap,pair(kpki,pair(kts,md5))))).
+		% Initial knowledge for the orchestrator
+		state_OrchestrationGoal(orchgoal, kap, karc, sscl, pki, ts, ss, bp, arc, ap, kpki, kts, kssarc, kbpss, signaturePolicy1, signaturePolicy2, md5, true, false, arcOK, certOK, sigOK, tsOK).
+		% the first instances of the TimeStamper, PKI and AP
+		state_timestamper(ts, 3, 1, kts, md5, dummy_nonce, dummy_msg).
+		state_pki(pki, 4, 1, kpki, md5, crl, dummy_agent, dummy_pk).
+		state_assertionsProvider(ap, 6, 1, kap, pki, ts, kpki, kts, md5, dummy_msg, dummy_agent, dummy_pk, dummy_msg, dummy_msg, dummy_agent, dummy_pk, dummy_bool).
+		% the second instances of the TimeStamper, PKI and AP
+		state_timestamper(ts, 7, 1, kts, md5, dummy_nonce, dummy_msg).
+		state_pki(pki, 8, 1, kpki, md5, crl, dummy_agent, dummy_pk).
+		state_assertionsProvider(ap, 9, 1, kap, pki, ts, kpki, kts, md5, dummy_msg, dummy_agent, dummy_pk, dummy_msg, dummy_msg, dummy_agent, dummy_pk, dummy_bool).
+		% an Archiver
+		state_arc(arc, 5, 1, karc, ss, pki, ts, kssarc, kpki, kts, md5, dummy_set, dummy_msg, dummy_msg, dummy_agent, dummy_pk, dummy_agent, dummy_pk, dummy_msg, dummy_msg, dummy_msg, dummy_msg, dummy_msg, dummy_msg).
+		% The client (BP)
+		state_OrchestrationClient(sscl, 10, 1, pki, ts, ss, bp, arc, kpki, kts, kssarc, kbpss, kap, karc, md5).
+		% Init of CRL
+		contains(pair(user1, key1), crl).
+		contains(pair(user2, key2), crl)
+
+section hornClauses:
+
+
+section rules:
+	% TS: putting timestamp
+	step step_0(TS, KTS, Hash, Dummy_Time, Dummy_MsgToTimestamp, SID, Time, MsgToTimestamp):=
+		state_timestamper(TS, SID, 1, KTS, Hash, Dummy_Time, Dummy_MsgToTimestamp).
+		iknows(MsgToTimestamp)
+	   =[exists Time]=>
+		state_timestamper(TS, SID, 1, KTS, Hash, Time, MsgToTimestamp).
+		iknows(pair(MsgToTimestamp, pair(Time, crypt(inv(KTS), pair(apply(Hash, MsgToTimestamp), Time)))))
+
+	% PKI: check whether a certificate is in CRL
+	% case if it is not in CRL
+	step step_1(PKI, KPKI, Hash, CRL, Dummy_CheckCertAgent, Dummy_CheckCertKey, SID, CheckCertAgent, CheckCertKey):=
+		state_pki(PKI, SID, 1, KPKI, Hash, CRL, Dummy_CheckCertAgent, Dummy_CheckCertKey).
+		iknows(pair(CheckCertAgent, CheckCertKey)).
+		not(contains(pair(CheckCertAgent, CheckCertKey), CRL))
+	   =>
+		state_pki(PKI, SID, 1, KPKI, Hash, CRL, CheckCertAgent, CheckCertKey).
+		iknows(pair(CheckCertAgent, pair(CheckCertKey, pair(false, crypt(inv(KPKI), pair(CheckCertAgent, pair(CheckCertKey, false)))))))
+
+	% case if it is in CRL
+	step step_2(PKI, KPKI, Hash, CRL, Dummy_CheckCertAgent, Dummy_CheckCertKey, SID, CheckCertAgent, CheckCertKey):=
+		state_pki(PKI, SID, 1, KPKI, Hash, CRL, Dummy_CheckCertAgent, Dummy_CheckCertKey).
+		iknows(pair(CheckCertAgent, CheckCertKey)).
+		contains(pair(CheckCertAgent, CheckCertKey), CRL)
+	   =>
+		state_pki(PKI, SID, 1, KPKI, Hash, CRL, CheckCertAgent, CheckCertKey).
+		iknows(pair(CheckCertAgent, pair(CheckCertKey, pair(true, crypt(inv(KPKI), pair(CheckCertAgent, pair(CheckCertKey, true))))))).
+		contains(pair(CheckCertAgent, CheckCertKey), CRL)
+
+	% An Archiver: receives a huge mssage,
+	% store it in his database Archive
+	% generates an assertion 
+	step step_3(ARC, KARC, SS, PKI, TS, KSSARC, KPKI, KTS, Hash, Dummy_Archive, Dummy_InID, Dummy_InContract, Dummy_InSigner1, Dummy_InPubKeySigner1, Dummy_InSigner2, Dummy_InPubKeySigner2, Dummy_InSigPolicy1, Dummy_InSigPolicy2, Dummy_InRevoked1, Dummy_InRevoked2, Dummy_InTime1, Dummy_InTime2, SID, InID, InContract, InSigner1, InPubKeySigner1, InSigner2, InPubKeySigner2, InSigPolicy1, InSigPolicy2, InRevoked1, InRevoked2, InTime1, InTime2):=
+		state_arc(ARC, SID, 1, KARC, SS, PKI, TS, KSSARC, KPKI, KTS, Hash, Dummy_Archive, Dummy_InID, Dummy_InContract, Dummy_InSigner1, Dummy_InPubKeySigner1, Dummy_InSigner2, Dummy_InPubKeySigner2, Dummy_InSigPolicy1, Dummy_InSigPolicy2, Dummy_InRevoked1, Dummy_InRevoked2, Dummy_InTime1, Dummy_InTime2).
+		iknows(scrypt(KSSARC, pair(InID, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigner2, pair(InPubKeySigner2, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, pair(InSigner1, pair(InPubKeySigner1, pair(InRevoked1, pair(InSigner2, pair(InPubKeySigner2, pair(InRevoked2, pair(crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1)))), pair(InTime1, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1))))))))), InTime1)), pair(crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2)))), pair(InTime2, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2))))))))), InTime2)), pair(crypt(inv(KPKI), pair(InSigner1, pair(InPubKeySigner1, InRevoked1))), crypt(inv(KPKI), pair(InSigner2, pair(InPubKeySigner2, InRevoked2))))))))))))))))))))))))))))))))
+	   =>
+		state_arc(ARC, SID, 1, KARC, SS, PKI, TS, KSSARC, KPKI, KTS, Hash, Dummy_Archive, InID, InContract, InSigner1, InPubKeySigner1, InSigner2, InPubKeySigner2, InSigPolicy1, InSigPolicy2, InRevoked1, InRevoked2, InTime1, InTime2).
+		iknows(scrypt(KSSARC, pair( InID, 
+		% Contract is archieved
+		crypt(inv(KARC), pair(arcOK, pair( apply(Hash, InContract), pair(pair(InSigner1, InPubKeySigner1), pair(InSigner2, InPubKeySigner2)))))))).
+		contains(pair(InID, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigner2, pair(InPubKeySigner2, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, pair(InSigner1, pair(InPubKeySigner1, pair(InRevoked1, pair(InSigner2, pair(InPubKeySigner2, pair(InRevoked2, pair(crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1)))), pair(InTime1, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1))))))))), InTime1)), pair(crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2)))), pair(InTime2, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2))))))))), InTime2)), pair(crypt(inv(KPKI), pair(InSigner1, pair(InPubKeySigner1, InRevoked1))), crypt(inv(KPKI), pair(InSigner2, pair(InPubKeySigner2, InRevoked2)))))))))))))))))))))))))))))), Dummy_Archive).
+		keepsecret(pair(InID, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigner2, pair(InPubKeySigner2, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, pair(InSigner1, pair(InPubKeySigner1, pair(InRevoked1, pair(InSigner2, pair(InPubKeySigner2, pair(InRevoked2, pair(crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1)))), pair(InTime1, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner1, pair(InPubKeySigner1, pair(InSigPolicy1, crypt(inv(InPubKeySigner1), pair(InContract, pair(InSigner1, pair(InPubKeySigner1, InSigPolicy1))))))))), InTime1)), pair(crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2)))), pair(InTime2, pair(crypt(inv(KTS), pair(apply(Hash, pair(InContract, pair(InSigner2, pair(InPubKeySigner2, pair(InSigPolicy2, crypt(inv(InPubKeySigner2), pair(InContract, pair(InSigner2, pair(InPubKeySigner2, InSigPolicy2))))))))), InTime2)), pair(crypt(inv(KPKI), pair(InSigner1, pair(InPubKeySigner1, InRevoked1))), crypt(inv(KPKI), pair(InSigner2, pair(InPubKeySigner2, InRevoked2)))))))))))))))))))))))))))))))
+
+	% AP: checks signature
+	step step_4(AP, KAP, PKI, TS, KPKI, KTS, Hash, Dummy_CheckSigMsg, Dummy_CheckSigAgent, Dummy_CheckSigKey, MsgToTimestamp, CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes, SID, CheckSigMsg, CheckSigAgent, CheckSigKey):=
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, Dummy_CheckSigMsg, Dummy_CheckSigAgent, Dummy_CheckSigKey, MsgToTimestamp, CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes).
+		iknows(pair(CheckSigMsg, pair(CheckSigAgent, pair(CheckSigKey, crypt(inv(CheckSigKey), CheckSigMsg)))))
+	   =>
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, MsgToTimestamp, CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes).
+		iknows(pair(CheckSigMsg,
+		% generate an assertion that message CheckSigMsg was signed well
+		crypt(inv(KAP), pair(sigOK, pair(CheckSigMsg, pair(CheckSigAgent, CheckSigKey))))))
+
+	% AP: checks timestamp
+	step step_5(AP, PKI, KAP, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, Dummy_MsgToTimestamp, Dummy_CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes, SID, MsgToTimestamp, CheckTime):=
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, Dummy_MsgToTimestamp, Dummy_CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes).
+		iknows(pair(MsgToTimestamp, pair(CheckTime, crypt(inv(KTS), pair(apply(Hash, MsgToTimestamp), CheckTime)))))
+	   =>
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, MsgToTimestamp, CheckTime, CheckCertAgent, CheckCertKey, CheckCertRes).
+		iknows(pair(MsgToTimestamp,
+		% message was timestamped
+		crypt(inv(KAP),pair(tsOK,MsgToTimestamp))))
+
+	% AP: checks certificate
+	step step_6(AP, PKI, KAP, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, MsgToTimestamp, CheckTime, Dummy_CheckCertAgent, Dummy_CheckCertKey, Dummy_CheckCertRes, SID, CheckCertAgent, CheckCertKey):=
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, MsgToTimestamp, CheckTime, Dummy_CheckCertAgent, Dummy_CheckCertKey, Dummy_CheckCertRes).
+		iknows(pair(CheckCertAgent, pair(CheckCertKey, pair(false, crypt(inv(KPKI), pair(CheckCertAgent, pair(CheckCertKey, false)))))))
+	   =>
+		state_assertionsProvider(AP, SID, 1, KAP, PKI, TS, KPKI, KTS, Hash, CheckSigMsg, CheckSigAgent, CheckSigKey, MsgToTimestamp, CheckTime, CheckCertAgent, CheckCertKey, false).
+		iknows(pair( pair(CheckCertAgent, pair(CheckCertKey, false )), 
+		% certificate is OK
+		crypt(inv(KAP),pair(certOK, pair(CheckCertAgent, CheckCertKey)))))
+
+	% The Client: see the textual description in D5.2
+	step step_7(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 1, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash)
+	   =>
+		state_OrchestrationClient(SSCl, SID, 2, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(contract, pair(signer1, pair(pubKey1, pair(signer2, pubKey2)))))))
+
+	step step_8(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 2, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, id))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 3, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer1, pubKey1))))
+
+	step step_9(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 3, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer1, pair(pubKey1, signaturePolicy1)))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 4, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(contract, pair(signer1, pair(pubKey1, pair(signaturePolicy1, crypt(inv(pubKey1), pair(contract, pair(signer1, pair(pubKey1, signaturePolicy1)))))))))))
+
+	step step_10(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 4, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(pair(id, pair(signer1, pubKey1)),
+		%require assertion that the message was well signed
+		crypt(inv(KAP), pair(sigOK, pair( pair(contract, pair(signer1, pair(pubKey1, signaturePolicy1))), pair(signer1, pubKey1)))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 5, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer1, pubKey1))))
+
+	step step_11(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 5, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair( pair(id, pair(signer1, pubKey1)),
+		% Message should be timestamped
+        crypt(inv(KAP), pair(tsOK,pair(contract, pair(signer1, pair(pubKey1, pair(signaturePolicy1, crypt(inv(pubKey1), pair(contract, pair(signer1, pair(pubKey1, signaturePolicy1)))))))))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 6, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer1, pubKey1))))
+
+	step step_12(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 6, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair( pair(id, pair(signer1, pair(pubKey1, false ))), 
+		% Certificate must be valid
+		crypt(inv(KAP), pair(certOK, pair(signer1, pubKey1))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 7, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer2, pubKey2))))
+
+	step step_13(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 7, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer2, pair(pubKey2, signaturePolicy2)))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 8, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(contract, pair(signer2, pair(pubKey2, pair(signaturePolicy2, crypt(inv(pubKey2), pair(contract, pair(signer2, pair(pubKey2, signaturePolicy2)))))))))))
+
+	step step_14(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 8, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair( pair(id, pair(signer2, pubKey2)),
+		%require assertion that the message was well signed
+		crypt(inv(KAP), pair( sigOK, pair(pair(contract, pair(signer2, pair(pubKey2, signaturePolicy2))), pair(signer2, pubKey2)))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 9, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer2, pubKey2))))
+
+	step step_15(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 9, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(pair(id, pair(signer2, pubKey2)),
+		%Message must be timestamped
+		crypt(inv(KAP), pair(tsOK, pair(contract, pair(signer2, pair(pubKey2, pair(signaturePolicy2, crypt(inv(pubKey2), pair(contract, pair(signer2, pair(pubKey2, signaturePolicy2)))))))))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 10, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, pair(signer2, pubKey2))))
+
+	step step_16(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 10, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(pair(id, pair(signer2, pair(pubKey2, false))), 
+		% Certificate must be valid
+		crypt(inv(KAP), pair(certOK, pair(signer2, pubKey2))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 11, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, id))
+
+	step step_17(SSCl, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, Hash, KAP, KARC, SID):=
+		state_OrchestrationClient(SSCl, SID, 11, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(scrypt(KBPSS, pair(id, 
+		% we want the contract to be archieved!
+		crypt(inv(KARC), pair(arcOK, pair( apply(Hash, contract), pair( pair(signer1, pubKey1), pair(signer2, pubKey2)) ))))))
+	   =>
+		state_OrchestrationClient(SSCl, SID, 12, PKI, TS, SS, BP, ARC, KPKI, KTS, KSSARC, KBPSS, KAP, KARC, Hash).
+		iknows(finish)
+
+section goals:
+
+% final state for the orchestrator
+attack_state orchestrationFinalState(Dummy) :=
+iknows(finish)
+
+% unreachable goal for the intruder...
+% attack_state someState(Dummy):=
+% 	iknows(kbpss)
+
+% The message received by the Archiver should stay secret
+attack_state secretRevealed(Msg):=
+	keepsecret(Msg).
+	iknows(Msg)

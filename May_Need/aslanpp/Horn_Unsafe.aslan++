@@ -1,0 +1,27 @@
+% TESTED FEATURES: Horn Clauses
+% EXPECTED OUTCOME: Unsafe
+specification Horn_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols
+    a(nat) : fact;
+    b(nat,nat) : fact;
+
+  clauses
+   %h2     : forall N. b(N,0)   :- a(N);  % would be flagged as an error
+   %h3(N)  : forall M. b(N,0)   :- a(N);  % would be flagged as an error
+   %h4     : forall N. b(0,0)   :- a(N);  % would be flagged as an error
+   %h5(N,M):           b(N,0)   :- a(N);  % would be flagged as an error
+    h(N)   : forall M. b(N,M) :- a(N); %% OFMC cannot handle this universal quantification
+% misleading error message: ofmc-core: The Hornclauses may have run into a non-termination---giving up.
+
+  body
+       a(0);
+
+  goals
+    trouble: %         !b(0,1) & 
+             %[](forall Y . b(0,Y));
+             [](!exists Y. b(0,Y));
+}

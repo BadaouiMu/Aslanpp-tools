@@ -1,0 +1,23 @@
+specification HornClauseEquality_Unsafe
+channel_model CCM
+
+entity Environment {
+       symbols
+        known(message) : fact;
+	premise(message) : fact;
+	conclusion(message) : fact;
+	a, b : message;       
+
+       clauses
+        inference(M) :
+	  conclusion(M) :- premise(M) & a=M;
+	start(M) :
+	  premise(M) :- known(M);
+       
+       body {
+         known(b);
+       }
+
+       goals
+         g : [](!conclusion(b));
+}

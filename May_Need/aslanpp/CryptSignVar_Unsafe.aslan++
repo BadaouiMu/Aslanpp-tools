@@ -1,0 +1,30 @@
+% TESTED FEATURES: encryption shorthands, variable assignment
+% EXPECTED OUTCOME: Unsafe
+specification CryptSignVar_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+		token : message;
+		stored(message) : fact;
+		mike : agent;
+
+	entity Citizen(Actor : agent)
+	{
+		symbols
+			M : message;
+
+		body {
+			M := {token}_inv(pk(Actor));
+			stored(M);
+		}
+	}
+
+	body {
+		new Citizen(mike);
+	}
+
+	goals
+		g : [](!exists M . stored(M));
+}

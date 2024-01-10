@@ -1,0 +1,20 @@
+% TESTED FEATURES: compound types
+% EXPECTED OUTCOME: Unsafe
+specification CompoundType_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+	   nonpublic noninvertible my_fnc(text, message) : message;
+	   nonpublic tok1: text;
+       nonpublic tok2: message;
+
+    body {
+	   iknows(my_fnc(tok1, tok2));
+	}
+
+	goals
+	   some_goal :
+	    [](!exists T2 . iknows(my_fnc(tok1, T2)));
+}

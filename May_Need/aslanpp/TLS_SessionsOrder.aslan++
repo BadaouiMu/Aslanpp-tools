@@ -1,0 +1,123 @@
+% @clatse(--nb 2)
+
+specification TLS_SessionsOrder
+channel_model CCM 
+
+entity Environment {
+
+  symbols
+    succ(nat): nat; %%% workaround; declaration should not be needed
+    server: agent;
+
+  symbols
+    ServerSessions: agent*text*nat set; % global for Server
+
+  entity Session(C, S: agent, ServerSessions: agent*text*nat set) {
+
+    entity Client (Actor, S: agent) {
+
+      symbols
+        SessID: text;
+        Counter: nat;
+        PayloadC,
+        PayloadS: text;
+
+      body {
+        secret_SessID:(SessID) := fresh();
+        Counter := 0; % start session
+        Actor *->* S: Actor.SessID.Counter;
+
+        Counter := succ(Counter); %1
+        PayloadC := fresh();
+        Actor *->*  S: (SessID.Counter). PayloadC;
+      channel_goal Client_TLS_Server:
+        Actor *->>* S: (SessID.Counter). PayloadC;
+        S *->*  Actor: (SessID.Counter).?PayloadS;
+      channel_goal Server_TLS_Client:
+        S *->>* Actor: (SessID.Counter). PayloadS;
+
+        Counter := succ(Counter); %2
+        PayloadC := fresh();
+        Actor *->*  S: (SessID.Counter). PayloadC;
+      channel_goal Client_TLS_Server:
+        Actor *->>* S: (SessID.Counter). PayloadC;
+        S *->*  Actor: (SessID.Counter).?PayloadS;
+      channel_goal Server_TLS_Client:
+        S *->>* Actor: (SessID.Counter). PayloadS;
+                               
+        assert finished: false; %%% for excutability testing; 
+        % If the model checker does not find an attack at least
+        % here, the model has an executability problem.
+        % Once this pseudo-attack has been shown, the assertion
+        % can be commented out to check for the other goals.
+      }
+    }
+
+    entity Server (C, Actor: agent, Sessions: agent*text*nat set) {
+
+      symbols
+        SessID: text;
+
+      entity Thread (Actor, C: agent, SessID: text,
+                     Sessions: agent*text*nat set) {
+        
+        symbols
+          N: nat;
+          PayloadC,
+          PayloadS: text;
+
+        body {
+          while(true) {
+            select {
+              on(C *->*  Actor: (SessID.?N).?PayloadC &
+                 Sessions->contains((C,SessID,?N))
+                ):
+               channel_goal Client_TLS_Server:
+                 C *->>* Actor: (SessID. N). PayloadC;
+              {
+                PayloadS := fresh();
+                Actor *->*  C: (SessID. N). PayloadS;
+              channel_goal Server_TLS_Client:
+                Actor *->>* C: (SessID. N). PayloadS;
+                Sessions->remove((C,SessID,     N ));
+                Sessions->add   ((C,SessID,succ(N)));
+              }
+            } 
+          }
+        }
+      }
+
+      body { % of the Server
+        while(true) {
+          select {
+            on(?C *->* Actor: ?C.secret_SessID:(?SessID).0 & 
+                              % Server learns C here!
+               !Sessions->contains((?C,?SessID,?))
+              ): { 
+              Sessions->add((C,SessID,succ(0)));
+              new Thread(Actor,C,SessID,Sessions);
+            % The Thread's Actor is the same as for the Server!
+            }
+          } 
+        }
+      }
+    }
+
+    body { % of Session
+      iknows(0); %%% workaround; should not be needed
+      new Server(C,S, ServerSessions);
+              %% C parameter needed only for goals
+      new Client(C,S);
+    }
+
+    goals
+      secret_SessID:(_) {C,S};
+  }
+
+  body { % all sessions are with the same server!
+    ServerSessions := {};
+    any C. Session(C, server, ServerSessions) where C!=server;
+    any C. Session(C, server, ServerSessions) where C!=server;
+  }
+}
+

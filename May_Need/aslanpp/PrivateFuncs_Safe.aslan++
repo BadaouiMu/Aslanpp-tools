@@ -1,0 +1,30 @@
+% TESTED FEATURES: private functions
+% EXPECTED OUTCOME: Safe
+specification PrivateFuncs_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		bob : agent;
+		token : message;
+		nonpublic tag(message) : message;	
+		knows(agent, message) : fact;
+
+	entity Bob(Actor : agent) {
+	       symbols
+		   M : message;
+
+	       body {
+	       	    ? ->* Actor : tag(?M);
+		    knows(Actor, M);
+	       }
+	}
+		
+	body {
+	     new Bob(bob);
+	}
+
+	goals
+	     unknown : [](!knows(bob, token));
+}

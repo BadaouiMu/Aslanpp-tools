@@ -1,0 +1,43 @@
+% TESTED FEATURES: Horn Clauses, taken from PTD, defining and using reflexive and transitive relation
+% EXPECTED OUTCOME: Unsafe
+specification Horn_Trans_limited_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  types
+    adt < message;
+
+  symbols
+    initial(adt): fact;
+    final(adt): fact;
+    lt (adt, adt): fact; % this is implicit
+    lt0(adt, adt): fact; % the explicit version of lt
+
+  clauses
+%   lt_refl: forall A. A->lt(A);  %% CL-AtSe used to hang with this, now seems ok!
+    lt_trans(A,B,C):   A->lt(C) :- A->lt(B) & B->lt(C);
+    lt_base(A,B):      A->lt(B) :- A->lt0(B);
+
+   symbols
+     adt1,adt2,adt3: adt;
+     ADTs: adt set;
+     A, A': adt;
+
+   body {
+     ADTs := {adt1, adt2, adt3}; % to limit the possibilites for applying the recursive Horn clause
+%    adt1->lt0(adt1); adt2->lt0(adt2); adt3->lt0(adt3);  %% CL-AtSe used to hang with this, now seems ok!
+     adt1->lt0(adt2);
+     adt2->lt0(adt3);
+
+     A := adt1;
+     initial(A);
+     if (ADTs->contains(?A') & A->lt(?A')) % A' should be any value "greater than" A,
+       final(A');
+   }
+
+   goals
+     negated_lt_okay: forall A1 A2.
+        [](initial(A1) & final(A2) => !(A1->lt(A2)));
+
+}

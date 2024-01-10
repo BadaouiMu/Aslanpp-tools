@@ -1,0 +1,82 @@
+%@satmc()
+%@clatse(NO)
+%@ofmc(NO)
+% TESTED FEATURES: (strengthened) authentication goals
+% EXPECTED OUTCOME: Safe
+specification ChannelGoalsAuth_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    nested_auth_a_b_nonce: protocol_id;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      Nonce, Payload : message;
+      token : message;
+    body {
+      Nonce := fresh();
+      Payload := token;
+      Actor *-> B : auth_a_b_nonce:(Nonce).auth_a_b_payload:(Payload);
+      witness(Actor, B, nested_auth_a_b_nonce, Nonce);
+    % channel_goal auth_a_b_nonce   : Actor *-> B : Nonce  ; % old-style goal
+    % channel_goal auth_a_b_payload : Actor *-> B : Payload; % old-style goal
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      OtherNonce, OtherPayload : message;
+
+    entity Bob1(A, Actor: agent) { % translator issue: new channel goal syntax for nested entity does not work
+      symbols
+        OtherNonce, OtherPayload : message;
+      body {
+      % A *-> Actor : auth_a_b_nonce:(?OtherNonce).auth_a_b_payload:(?OtherPayload); % does not work
+      % this works, though:
+        A *-> Actor : ?OtherNonce.?OtherPayload;
+        request(Actor, A, nested_auth_a_b_nonce, OtherNonce, IID);
+      }
+    }
+    body {
+      new Bob1(A, Actor);
+      A *-> Actor : auth_a_b_nonce:(?OtherNonce).auth_a_b_payload:(?OtherPayload);
+    % channel_goal auth_a_b_nonce  : A *-> Actor : OtherNonce  ; % old-style goal
+    % channel_goal auth_a_b_payload: A *-> Actor : OtherPayload; % old-style goal
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new   Bob(a, b);
+  }
+
+  goals
+    auth_a_b_nonce   :(_) a *-> b;
+    auth_a_b_payload :(_) a *-> b;
+
+    nested_auth_a_b_nonce: forall A B M IID. [](request(B,A,nested_auth_a_b_nonce,M,IID) =>
+                            (%<-> % The O operator would not bet correctly handled by the backends, but not needed here!
+                             (witness(A,B,nested_auth_a_b_nonce,M)) | dishonest(A)));
+
+    strengthened_authentication: 
+      forall A B P M IID. [](request(B,A,P,M,IID) =>
+                              (%<-> % The O operator would not be correctly handled by the backends, but not needed here!
+                               (witness(A,B,P,M))  
+                               | (dishonest(A) => iknows(M))));
+%  Leaving out the <-> would yield the desired attack state:
+%attack_state strengthened_authentication(E_sa_A, E_sa_B, E_sa_IID, M, P) :=
+%  dishonest(E_sa_A).
+%  not(iknows(M)).
+%  not(witness(E_sa_A, E_sa_B, P, M)).
+%  request(E_sa_B, E_sa_A, P, M, E_sa_IID)
+
+%attack_state strengthened_authentication(Req, Wit, P, Msg, IID) :=
+%       not(witness(Wit, Req, P, Msg)).
+%           request(Req, Wit, P, Msg, IID).
+%       dishonest(Wit). 
+%       not(iknows(Msg))
+
+}

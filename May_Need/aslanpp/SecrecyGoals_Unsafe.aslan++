@@ -1,0 +1,35 @@
+% TESTED FEATURES: secrecy goals, in particular how to refer to the knowing agents
+% EXPECTED OUTCOME: Unsafe
+specification SecrecyGoals_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+
+  entity Alice(Actor, B: agent) {
+    symbols
+      Tok: message;
+    body {
+      secret_token:(Tok) := fresh();
+      Actor *->* B : Tok;
+    }
+  }
+
+  entity Bob(A, Actor: agent) {
+    symbols
+      Tok : message;
+    body {
+      A *->* Actor : secret_token:(?Tok);
+      iknows(Tok);
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+  goals
+    secret_token:(_) {a, b};
+}

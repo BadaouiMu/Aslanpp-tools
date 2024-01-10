@@ -1,0 +1,57 @@
+% @clatse(NO)
+% @satmc(NO)
+% TESTED FEATURES: equalities
+% EXPECTED OUTCOME: Safe
+
+% http://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange
+specification DiffieHellman_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    noninvertible exp(message, message): message;
+ % we do not model modulus P
+  equations 
+    exp(exp(G,NA),NB) = 
+    exp(exp(G,NB),NA);  %% all backends cannot handle this :-(
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      G, NA: text;
+      GNB,K: message;
+    body {
+      G  := fresh();
+      NA := fresh();
+      secrecy_goal secret_NA: Actor : NA;
+
+      Actor -> B: G.exp(G,NA);
+      B *-> Actor: ?GNB;
+    channel_goal secure_KA:
+      B *->* Actor : exp(GNB,NA);
+      K := exp(GNB,NA);
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      G, NB: text;
+      GNA,K: message;
+    body {
+      NB := fresh();
+      secrecy_goal secret_NB: Actor : NB;
+
+      A -> Actor: ?G.?GNA;
+      Actor *-> A: exp(G,NB);
+    channel_goal secure_KB:
+      Actor *->* A : exp(GNA,NB);
+      K := exp(GNA,NB);
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+}

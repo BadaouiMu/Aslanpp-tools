@@ -1,0 +1,43 @@
+% @clatse(--not_hc)
+% @ofmc(--classic --untyped)
+% @satmc()
+% TESTED FEATURES: Horn Clauses, taken from PTD, defining and using reflexive and transitive relation
+% EXPECTED OUTCOME: Safe
+
+specification Horn_Refl_Trans_Safe
+channel_model CCM
+
+entity Environment
+{
+  types
+    adt < message;
+
+  symbols
+    initial(adt): fact;
+    final(adt): fact;
+    is_adt(adt): fact;   % workaround for OFMC's below universal quantifier problem
+    lt (adt, adt): fact;
+    lt0(adt, adt): fact; % the explicit version of lt
+
+  clauses
+  % lt_refl: forall A. A->lt(A); %% OFMC cannot handle this clause due to universal quantifier:  
+            % "ofmc-core: The Hornclauses may have run into a non-termination---giving up."
+    lt_refl(A):        A->lt(A) :- is_adt(A); % is_adt as workaround for OFMC's universal quantifier problem
+    lt_trans(A,B,C):   A->lt(C) :- A->lt(B) & B->lt(C);
+    lt_base(A,B):      A->lt(B) :- A->lt0(B);
+
+   symbols
+     A0, A1, A2: adt;
+
+   body {
+     A0 := fresh(); is_adt(A0);
+     initial(A0);
+     A1 := fresh(); is_adt(A1); A0->lt0(A1); % A1 should be any value "weakly greater than" A0, e.g. A0 itself
+     A2 := fresh(); is_adt(A2); A1->lt0(A2); % A2 should be any value "weakly greater than" A1, e.g. A1 itself
+     final(A2);
+   }
+
+   goals
+     lt_okay: forall A0 A2.
+        [](initial(A0) & final(A2) => A0->lt(A2));
+}

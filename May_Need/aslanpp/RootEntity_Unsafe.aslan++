@@ -1,0 +1,15 @@
+% TESTED FEATURES: initial state
+% EXPECTED OUTCOME: Safe
+specification RootEntity_XYZ % translator issue: should give warnign for not matching name!
+channel_model CCM
+
+%entity Environment(X: agent) % now correctly rule out by translator
+entity Environment
+{
+  symbols
+    nonpublic secret: nat;
+  body {
+    secrecy_goal test: Actor: secret;
+    assert init: !(Actor=root & IID=0);
+  }
+}

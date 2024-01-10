@@ -1,0 +1,21 @@
+specification CK_Test
+channel_model CCM
+
+entity Environment {
+	types
+		info < message;
+		
+	symbols
+		nonpublic knows(agent, info) : fact;
+		nonpublic said(agent, info) : info;
+		Anyone : agent;
+		Anything : info;
+		
+	clauses
+		blindTrust(A, B, I) : knows(A, I) :- knows(A, said(B, I));
+	
+	body {
+		if (knows(?Anyone, ?Anything))
+			assert done : false;
+	}
+}

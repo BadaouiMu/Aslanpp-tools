@@ -1,0 +1,615 @@
+% @specification(PB)
+% @channel_model(CCM)
+% @connector_name(ASLan++ Connector)
+% @connector_version(0.5.11)
+% @connector_options(-opt LUMP -hc ALL)
+section signature:
+	message > channel
+	ak : agent -> public_key
+	application : agent * message * message * message -> message
+	child : nat * nat -> fact
+	ck : agent -> public_key
+	completed : agent -> fact
+	defaultPseudonym : agent * nat -> agent
+	descendant : nat * nat -> fact
+	dishonest : agent -> fact
+	eval : message -> message
+	hash : message -> message
+	initiate : agent * agent * message -> message
+	is_eligible : agent -> fact
+	pk : agent -> public_key
+	state_BidManager : agent * nat * nat * agent * agent * message * agent * agent -> fact
+	state_BidPortal : agent * nat * nat * agent * agent * message * set(pair(agent, pair(message, pair(message, message)))) * agent * agent * message * message * message * message -> fact
+	state_Bidder : agent * nat * nat * agent * message * message * message * agent -> fact
+	state_Environment : agent * nat * nat -> fact
+	state_SubmissionTimer : agent * nat * nat -> fact
+	state_TechnicalCommittee : agent * nat * nat * agent * message * agent -> fact
+	submission_request : agent -> message
+
+section types:
+	Actor : agent
+	Ak_arg_1 : agent
+	Application_arg_1 : agent
+	Application_arg_2 : message
+	Application_arg_3 : message
+	Application_arg_4 : message
+	Applications : set(pair(agent, pair(message, pair(message, message))))
+	BM : agent
+	BP : agent
+	Bidder : agent
+	Bidder_1 : agent
+	Ck_arg_1 : agent
+	Descendant_arg_1 : nat
+	Descendant_arg_2 : nat
+	Descendant_arg_3 : nat
+	Dummy : message
+	Dummy_1 : message
+	Dummy_2 : message
+	Dummy_3 : message
+	Dummy_4 : message
+	E_BM_Actor : agent
+	E_BM_IID : nat
+	E_BM_SL : nat
+	E_BP_Actor : agent
+	E_BP_Bidder : agent
+	E_BP_Bidder_1 : agent
+	E_BP_Bidder_2 : agent
+	E_BP_Bidder_3 : agent
+	E_BP_Bidder_4 : agent
+	E_BP_Bidder_5 : agent
+	E_BP_FP : message
+	E_BP_FP_1 : message
+	E_BP_FP_2 : message
+	E_BP_FP_3 : message
+	E_BP_IID : nat
+	E_BP_SL : nat
+	E_BP_ST_Actor : agent
+	E_BP_ST_IID : nat
+	E_BP_ST_SL : nat
+	E_BP_TC : agent
+	E_BP_TP : message
+	E_BP_TP_1 : message
+	E_BP_TP_2 : message
+	E_BP_TP_3 : message
+	E_BP_TP_4 : message
+	E_BP_Tender : message
+	E_BP_Tender_1 : message
+	E_BP_Tender_2 : message
+	E_BP_Winner : agent
+	E_BP_Winner_1 : agent
+	E_B_Actor : agent
+	E_B_BP : agent
+	E_B_IID : nat
+	E_B_SL : nat
+	E_B_Tender : message
+	E_B_Tender_1 : message
+	E_TC_Actor : agent
+	E_TC_BP : agent
+	E_TC_Bidder : agent
+	E_TC_Bidder_1 : agent
+	E_TC_IID : nat
+	E_TC_SL : nat
+	E_TC_TP : message
+	E_TC_TP_1 : message
+	Eval_arg_1 : message
+	FP : message
+	FP_1 : message
+	Hash_arg_1 : message
+	IID : nat
+	IID_1 : nat
+	IID_2 : nat
+	IID_3 : nat
+	IID_4 : nat
+	IID_5 : nat
+	IID_6 : nat
+	Initiate_arg_1 : agent
+	Initiate_arg_2 : agent
+	Initiate_arg_3 : message
+	Pk_arg_1 : agent
+	Report : message
+	SL : nat
+	Submission_request_arg_1 : agent
+	TC : agent
+	TP : message
+	TP_1 : message
+	Tender : message
+	Tender_1 : message
+	VTP : message
+	WBidder : agent
+	WBidder_1 : agent
+	Winner : agent
+	Winner_1 : agent
+	alarm : fact
+	alice : agent
+	applicants : set(agent)
+	applicants_download_request : message
+	applicants_ready : message
+	applications : set(message)
+	atag : text
+	bm : agent
+	bp : agent
+	break : fact
+	ctag : text
+	dummy_agent : agent
+	dummy_message : message
+	dummy_nat : nat
+	dummy_set_tuple_agent_message_message_message : set(pair(agent, pair(message, pair(message, message))))
+	eligible_applicants : set(agent)
+	eligible_applicants_ready : message
+	eligible_technical_proposals : set(pair(agent, message))
+	eligible_technical_proposals_ready : message
+	eve : agent
+	false : fact
+	financial_reports : set(pair(agent, pair(message, message)))
+	financial_reports_ready : message
+	reports_download_request : message
+	run : agent
+	stag : text
+	submission_phase_open : fact
+	tc : agent
+	technical_proposals_download_request : message
+	technical_reports : set(pair(agent, message))
+	technical_reports_ready : message
+	true : fact
+	winner_request : message
+
+section inits:
+
+% @new_instance(new_entity=Environment; Actor=dummy_agent; IID=dummy_nat; SL=1)
+initial_state init :=
+	dishonest(i).
+	iknows(alice).
+	iknows(atag).
+	iknows(bm).
+	iknows(bp).
+	iknows(ctag).
+	iknows(eve).
+	iknows(i).
+	iknows(inv(ak(i))).
+	iknows(inv(ck(i))).
+	iknows(inv(pk(i))).
+	iknows(stag).
+	iknows(tc).
+	state_Environment(dummy_agent, dummy_nat, 1).
+	true
+
+section hornClauses:
+
+hc public_ck(Ck_arg_1) :=
+	iknows(ck(Ck_arg_1)) :-
+		iknows(Ck_arg_1)
+
+hc public_ak(Ak_arg_1) :=
+	iknows(ak(Ak_arg_1)) :-
+		iknows(Ak_arg_1)
+
+hc public_pk(Pk_arg_1) :=
+	iknows(pk(Pk_arg_1)) :-
+		iknows(Pk_arg_1)
+
+hc public_hash(Hash_arg_1) :=
+	iknows(hash(Hash_arg_1)) :-
+		iknows(Hash_arg_1)
+
+hc descendant_closure(Descendant_arg_1, Descendant_arg_2, Descendant_arg_3) :=
+	descendant(Descendant_arg_1, Descendant_arg_3) :-
+		descendant(Descendant_arg_1, Descendant_arg_2),
+		descendant(Descendant_arg_2, Descendant_arg_3)
+
+hc descendant_direct(Descendant_arg_1, Descendant_arg_2) :=
+	descendant(Descendant_arg_1, Descendant_arg_2) :-
+		child(Descendant_arg_1, Descendant_arg_2)
+
+hc inv_initiate_1(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3) :=
+	iknows(Initiate_arg_1) :-
+		iknows(initiate(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3))
+
+hc inv_initiate_2(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3) :=
+	iknows(Initiate_arg_2) :-
+		iknows(initiate(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3))
+
+hc inv_initiate_3(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3) :=
+	iknows(Initiate_arg_3) :-
+		iknows(initiate(Initiate_arg_1, Initiate_arg_2, Initiate_arg_3))
+
+hc inv_submission_request_1(Submission_request_arg_1) :=
+	iknows(Submission_request_arg_1) :-
+		iknows(submission_request(Submission_request_arg_1))
+
+hc inv_application_1(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4) :=
+	iknows(Application_arg_1) :-
+		iknows(application(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4))
+
+hc inv_application_2(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4) :=
+	iknows(Application_arg_2) :-
+		iknows(application(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4))
+
+hc inv_application_3(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4) :=
+	iknows(Application_arg_3) :-
+		iknows(application(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4))
+
+hc inv_application_4(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4) :=
+	iknows(Application_arg_4) :-
+		iknows(application(Application_arg_1, Application_arg_2, Application_arg_3, Application_arg_4))
+
+hc inv_eval_1(Eval_arg_1) :=
+	iknows(Eval_arg_1) :-
+		iknows(eval(Eval_arg_1))
+
+section rules:
+
+% @new_instance(entity=Environment; iid=IID; line=234; new_entity=BidManager; Actor=bm; IID=IID_1; SL=1; TC=tc; BP=bp; Tender=dummy_message; Bidder=dummy_agent; WBidder=dummy_agent)
+% @new_instance(entity=Environment; iid=IID; line=235; new_entity=TechnicalCommittee; Actor=tc; IID=IID_2; SL=1; BP=bp; TP=dummy_message; Bidder=dummy_agent)
+% @new_instance(entity=Environment; iid=IID; line=236; new_entity=BidPortal; Actor=bp; IID=IID_3; SL=1; BM=bm; TC=tc; Tender=dummy_message; Applications=dummy_set_tuple_agent_message_message_message; Bidder=dummy_agent; Winner=dummy_agent; Report=dummy_message; FP=dummy_message; TP=dummy_message; VTP=dummy_message)
+% @new_instance(entity=Environment; iid=IID; line=237; new_entity=Bidder; Actor=alice; IID=IID_4; SL=1; BP=bp; Tender=dummy_message; TP=dummy_message; FP=dummy_message; Winner=dummy_agent)
+% @new_instance(entity=Environment; iid=IID; line=238; new_entity=Bidder; Actor=eve; IID=IID_5; SL=1; BP=bp; Tender=dummy_message; TP=dummy_message; FP=dummy_message; Winner=dummy_agent)
+% @step_label(entity=Environment; iid=IID; line=238; variable=SL; term=6)
+step step_001_Environment__line_234(Actor, IID, IID_1, IID_2, IID_3, IID_4, IID_5) :=
+	state_Environment(Actor, IID, 1)
+	=[exists IID_1, IID_2, IID_3, IID_4, IID_5]=>
+	child(IID, IID_1).
+	child(IID, IID_2).
+	child(IID, IID_3).
+	child(IID, IID_4).
+	child(IID, IID_5).
+	state_BidManager(bm, IID_1, 1, tc, bp, dummy_message, dummy_agent, dummy_agent).
+	state_BidPortal(bp, IID_3, 1, bm, tc, dummy_message, dummy_set_tuple_agent_message_message_message, dummy_agent, dummy_agent, dummy_message, dummy_message, dummy_message, dummy_message).
+	state_Bidder(alice, IID_4, 1, bp, dummy_message, dummy_message, dummy_message, dummy_agent).
+	state_Bidder(eve, IID_5, 1, bp, dummy_message, dummy_message, dummy_message, dummy_agent).
+	state_Environment(Actor, IID, 6).
+	state_TechnicalCommittee(tc, IID_2, 1, bp, dummy_message, dummy_agent)
+
+% @introduce(entity=BidManager; iid=E_BM_IID; line=66; fact=is_eligible(alice))
+% @fresh(entity=BidManager; iid=E_BM_IID; line=68; variable=Tender; term=Tender_1)
+% @communication(entity=BidManager; iid=E_BM_IID; line=70; sender=E_BM_Actor; receiver=BP; payload=initiate(E_BM_Actor, TC, Tender_1); channel=authCh; fact=iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, initiate(E_BM_Actor, TC, Tender_1))))); direction=send)
+% @step_label(entity=BidManager; iid=E_BM_IID; line=70; variable=SL; term=4)
+step step_002_BidManager__line_66(BP, Bidder, E_BM_Actor, E_BM_IID, TC, Tender, Tender_1, WBidder) :=
+	not(dishonest(E_BM_Actor)).
+	state_BidManager(E_BM_Actor, E_BM_IID, 1, TC, BP, Tender, Bidder, WBidder)
+	=[exists Tender_1]=>
+	iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, initiate(E_BM_Actor, TC, Tender_1))))).
+	is_eligible(alice).
+	state_BidManager(E_BM_Actor, E_BM_IID, 4, TC, BP, Tender_1, Bidder, WBidder)
+
+% @communication(entity=BidManager; iid=E_BM_IID; line=74; sender=BP; receiver=E_BM_Actor; payload=applicants_ready; channel=authCh; fact=iknows(sign(inv(ak(BP)), pair(atag, pair(E_BM_Actor, applicants_ready)))); direction=receive)
+% @step_label(entity=BidManager; iid=E_BM_IID; line=74; variable=SL; term=5)
+step step_003_BidManager__line_74(BP, Bidder, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	iknows(sign(inv(ak(BP)), pair(atag, pair(E_BM_Actor, applicants_ready)))).
+	state_BidManager(E_BM_Actor, E_BM_IID, 4, TC, BP, Tender, Bidder, WBidder)
+	=>
+	state_BidManager(E_BM_Actor, E_BM_IID, 5, TC, BP, Tender, Bidder, WBidder)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=76; test=contains(Bidder_1, applicants))
+% @step_label(entity=BidManager; iid=E_BM_IID; line=76; variable=SL; term=6)
+step step_004_BidManager__line_76(BP, Bidder, Bidder_1, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	contains(Bidder_1, applicants).
+	state_BidManager(E_BM_Actor, E_BM_IID, 5, TC, BP, Tender, Bidder, WBidder)
+	=>
+	contains(Bidder_1, applicants).
+	state_BidManager(E_BM_Actor, E_BM_IID, 6, TC, BP, Tender, Bidder_1, WBidder)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=77; test=is_eligible(Bidder))
+% @introduce(entity=BidManager; iid=E_BM_IID; line=78; fact=contains(Bidder, eligible_applicants))
+% @retract(entity=BidManager; iid=E_BM_IID; line=80; fact=contains(Bidder, applicants))
+% @step_label(entity=BidManager; iid=E_BM_IID; line=80; variable=SL; term=5)
+step step_005_BidManager__line_77(BP, Bidder, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	contains(Bidder, applicants).
+	is_eligible(Bidder).
+	state_BidManager(E_BM_Actor, E_BM_IID, 6, TC, BP, Tender, Bidder, WBidder)
+	=>
+	contains(Bidder, eligible_applicants).
+	is_eligible(Bidder).
+	state_BidManager(E_BM_Actor, E_BM_IID, 5, TC, BP, Tender, Bidder, WBidder)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=77; test=not(is_eligible(Bidder)))
+% @retract(entity=BidManager; iid=E_BM_IID; line=80; fact=contains(Bidder, applicants))
+% @step_label(entity=BidManager; iid=E_BM_IID; line=80; variable=SL; term=5)
+step step_006_BidManager__line_77(BP, Bidder, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	contains(Bidder, applicants).
+	not(is_eligible(Bidder)).
+	state_BidManager(E_BM_Actor, E_BM_IID, 6, TC, BP, Tender, Bidder, WBidder)
+	=>
+	state_BidManager(E_BM_Actor, E_BM_IID, 5, TC, BP, Tender, Bidder, WBidder)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=76; test=not(contains(Bidder_1, applicants)))
+% @communication(entity=BidManager; iid=E_BM_IID; line=83; sender=E_BM_Actor; receiver=BP; payload=eligible_applicants_ready; channel=authCh; fact=iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, eligible_applicants_ready)))); direction=send)
+% @step_label(entity=BidManager; iid=E_BM_IID; line=83; variable=SL; term=10)
+step step_007_BidManager__line_76(BP, Bidder, Bidder_1, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	not(contains(Bidder_1, applicants)).
+	state_BidManager(E_BM_Actor, E_BM_IID, 5, TC, BP, Tender, Bidder, WBidder)
+	=>
+	iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, eligible_applicants_ready)))).
+	state_BidManager(E_BM_Actor, E_BM_IID, 10, TC, BP, Tender, Bidder, WBidder)
+
+% @communication(entity=BidManager; iid=E_BM_IID; line=86; sender=BP; receiver=E_BM_Actor; payload=financial_reports_ready; channel=authCh; fact=iknows(sign(inv(ak(BP)), pair(atag, pair(E_BM_Actor, financial_reports_ready)))); direction=receive)
+% @step_label(entity=BidManager; iid=E_BM_IID; line=86; variable=SL; term=11)
+step step_008_BidManager__line_86(BP, Bidder, E_BM_Actor, E_BM_IID, TC, Tender, WBidder) :=
+	iknows(sign(inv(ak(BP)), pair(atag, pair(E_BM_Actor, financial_reports_ready)))).
+	state_BidManager(E_BM_Actor, E_BM_IID, 10, TC, BP, Tender, Bidder, WBidder)
+	=>
+	state_BidManager(E_BM_Actor, E_BM_IID, 11, TC, BP, Tender, Bidder, WBidder)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=90; test=contains(pair(WBidder_1, pair(Dummy, Dummy_1)), financial_reports))
+% @communication(entity=BidManager; iid=E_BM_IID; line=91; sender=E_BM_Actor; receiver=BP; payload=WBidder_1; channel=authCh; fact=iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, WBidder_1)))); direction=send)
+% @step_label(entity=BidManager; iid=E_BM_IID; line=91; variable=SL; term=13)
+step step_009_BidManager__line_90(BP, Bidder, Dummy, Dummy_1, E_BM_Actor, E_BM_IID, TC, Tender, WBidder, WBidder_1) :=
+	contains(pair(WBidder_1, pair(Dummy, Dummy_1)), financial_reports).
+	state_BidManager(E_BM_Actor, E_BM_IID, 11, TC, BP, Tender, Bidder, WBidder)
+	=>
+	contains(pair(WBidder_1, pair(Dummy, Dummy_1)), financial_reports).
+	iknows(sign(inv(ak(E_BM_Actor)), pair(atag, pair(BP, WBidder_1)))).
+	state_BidManager(E_BM_Actor, E_BM_IID, 13, TC, BP, Tender, Bidder, WBidder_1)
+
+% @guard(entity=BidManager; iid=E_BM_IID; line=90; test=not(contains(pair(WBidder_1, pair(Dummy, Dummy_1)), financial_reports)))
+% @step_label(entity=BidManager; iid=E_BM_IID; line=90; variable=SL; term=13)
+step step_010_BidManager__line_90(BP, Bidder, Dummy, Dummy_1, E_BM_Actor, E_BM_IID, TC, Tender, WBidder, WBidder_1) :=
+	not(contains(pair(WBidder_1, pair(Dummy, Dummy_1)), financial_reports)).
+	state_BidManager(E_BM_Actor, E_BM_IID, 11, TC, BP, Tender, Bidder, WBidder)
+	=>
+	state_BidManager(E_BM_Actor, E_BM_IID, 13, TC, BP, Tender, Bidder, WBidder)
+
+% @communication(entity=Bidder; iid=E_B_IID; line=111; sender=E_B_Actor; receiver=E_B_BP; payload=submission_request(E_B_Actor); channel=authCh; fact=iknows(sign(inv(ak(E_B_Actor)), pair(atag, pair(E_B_BP, submission_request(E_B_Actor))))); direction=send)
+% @step_label(entity=Bidder; iid=E_B_IID; line=111; variable=SL; term=2)
+step step_011_Bidder__line_111(E_B_Actor, E_B_BP, E_B_IID, E_B_Tender, FP, TP, Winner) :=
+	not(dishonest(E_B_Actor)).
+	state_Bidder(E_B_Actor, E_B_IID, 1, E_B_BP, E_B_Tender, TP, FP, Winner)
+	=>
+	iknows(sign(inv(ak(E_B_Actor)), pair(atag, pair(E_B_BP, submission_request(E_B_Actor))))).
+	state_Bidder(E_B_Actor, E_B_IID, 2, E_B_BP, E_B_Tender, TP, FP, Winner)
+
+% @communication(entity=Bidder; iid=E_B_IID; line=112; sender=E_B_BP; receiver=E_B_Actor; payload=E_B_Tender_1; fact=iknows(E_B_Tender_1); direction=receive)
+% @fresh(entity=Bidder; iid=E_B_IID; line=113; variable=FP; term=FP_1)
+% @fresh(entity=Bidder; iid=E_B_IID; line=114; variable=TP; term=TP_1)
+% @communication(entity=Bidder; iid=E_B_IID; line=115; sender=E_B_Actor; receiver=E_B_BP; payload=application(E_B_Actor, E_B_Tender_1, FP_1, TP_1); channel=secCh; fact=iknows(crypt(ck(E_B_BP), sign(inv(ak(E_B_Actor)), pair(stag, pair(E_B_BP, application(E_B_Actor, E_B_Tender_1, FP_1, TP_1)))))); direction=send)
+% @step_label(entity=Bidder; iid=E_B_IID; line=115; variable=SL; term=6)
+step step_012_Bidder__line_112(E_B_Actor, E_B_BP, E_B_IID, E_B_Tender, E_B_Tender_1, FP, FP_1, TP, TP_1, Winner) :=
+	iknows(E_B_Tender_1).
+	state_Bidder(E_B_Actor, E_B_IID, 2, E_B_BP, E_B_Tender, TP, FP, Winner)
+	=[exists FP_1, TP_1]=>
+	iknows(crypt(ck(E_B_BP), sign(inv(ak(E_B_Actor)), pair(stag, pair(E_B_BP, application(E_B_Actor, E_B_Tender_1, FP_1, TP_1)))))).
+	state_Bidder(E_B_Actor, E_B_IID, 6, E_B_BP, E_B_Tender_1, TP_1, FP_1, Winner)
+
+% @communication(entity=Bidder; iid=E_B_IID; line=119; sender=E_B_BP; receiver=E_B_Actor; payload=Winner_1; channel=authCh; fact=iknows(sign(inv(ak(E_B_BP)), pair(atag, pair(E_B_Actor, Winner_1)))); direction=receive)
+% @introduce(entity=Bidder; iid=E_B_IID; line=122; fact=completed(Winner_1))
+% @step_label(entity=Bidder; iid=E_B_IID; line=122; variable=SL; term=8)
+step step_013_Bidder__line_119(E_B_Actor, E_B_BP, E_B_IID, E_B_Tender, FP, TP, Winner, Winner_1) :=
+	iknows(sign(inv(ak(E_B_BP)), pair(atag, pair(E_B_Actor, Winner_1)))).
+	state_Bidder(E_B_Actor, E_B_IID, 6, E_B_BP, E_B_Tender, TP, FP, Winner)
+	=>
+	completed(Winner_1).
+	state_Bidder(E_B_Actor, E_B_IID, 8, E_B_BP, E_B_Tender, TP, FP, Winner_1)
+
+% @communication(entity=TechnicalCommittee; iid=E_TC_IID; line=140; sender=E_TC_BP; receiver=E_TC_Actor; payload=eligible_technical_proposals_ready; channel=authCh; fact=iknows(sign(inv(ak(E_TC_BP)), pair(atag, pair(E_TC_Actor, eligible_technical_proposals_ready)))); direction=receive)
+% @step_label(entity=TechnicalCommittee; iid=E_TC_IID; line=140; variable=SL; term=2)
+step step_014_TechnicalCommittee__line_140(E_TC_Actor, E_TC_BP, E_TC_Bidder, E_TC_IID, E_TC_TP) :=
+	iknows(sign(inv(ak(E_TC_BP)), pair(atag, pair(E_TC_Actor, eligible_technical_proposals_ready)))).
+	not(dishonest(E_TC_Actor)).
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 1, E_TC_BP, E_TC_TP, E_TC_Bidder)
+	=>
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 2, E_TC_BP, E_TC_TP, E_TC_Bidder)
+
+% @guard(entity=TechnicalCommittee; iid=E_TC_IID; line=142; test=contains(pair(E_TC_Bidder_1, E_TC_TP_1), eligible_technical_proposals))
+% @introduce(entity=TechnicalCommittee; iid=E_TC_IID; line=143; fact=contains(pair(E_TC_Bidder_1, eval(E_TC_TP_1)), technical_reports))
+% @retract(entity=TechnicalCommittee; iid=E_TC_IID; line=144; fact=contains(pair(E_TC_Bidder_1, E_TC_TP_1), eligible_technical_proposals))
+% @step_label(entity=TechnicalCommittee; iid=E_TC_IID; line=144; variable=SL; term=2)
+step step_015_TechnicalCommittee__line_142(E_TC_Actor, E_TC_BP, E_TC_Bidder, E_TC_Bidder_1, E_TC_IID, E_TC_TP, E_TC_TP_1) :=
+	contains(pair(E_TC_Bidder_1, E_TC_TP_1), eligible_technical_proposals).
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 2, E_TC_BP, E_TC_TP, E_TC_Bidder)
+	=>
+	contains(pair(E_TC_Bidder_1, eval(E_TC_TP_1)), technical_reports).
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 2, E_TC_BP, E_TC_TP_1, E_TC_Bidder_1)
+
+% @guard(entity=TechnicalCommittee; iid=E_TC_IID; line=142; test=not(contains(pair(E_TC_Bidder_1, E_TC_TP_1), eligible_technical_proposals)))
+% @communication(entity=TechnicalCommittee; iid=E_TC_IID; line=147; sender=E_TC_Actor; receiver=E_TC_BP; payload=technical_reports_ready; channel=authCh; fact=iknows(sign(inv(ak(E_TC_Actor)), pair(atag, pair(E_TC_BP, technical_reports_ready)))); direction=send)
+% @step_label(entity=TechnicalCommittee; iid=E_TC_IID; line=147; variable=SL; term=6)
+step step_016_TechnicalCommittee__line_142(E_TC_Actor, E_TC_BP, E_TC_Bidder, E_TC_Bidder_1, E_TC_IID, E_TC_TP, E_TC_TP_1) :=
+	not(contains(pair(E_TC_Bidder_1, E_TC_TP_1), eligible_technical_proposals)).
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 2, E_TC_BP, E_TC_TP, E_TC_Bidder)
+	=>
+	iknows(sign(inv(ak(E_TC_Actor)), pair(atag, pair(E_TC_BP, technical_reports_ready)))).
+	state_TechnicalCommittee(E_TC_Actor, E_TC_IID, 6, E_TC_BP, E_TC_TP, E_TC_Bidder)
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=182; sender=BM; receiver=E_BP_Actor; payload=initiate(BM, E_BP_TC, E_BP_Tender_1); channel=authCh; fact=iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, initiate(BM, E_BP_TC, E_BP_Tender_1))))); direction=receive)
+% @new_instance(entity=BidPortal; iid=E_BP_IID; line=184; new_entity=SubmissionTimer; Actor=dummy_agent; IID=IID_6; SL=1)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=184; variable=SL; term=3)
+step step_017_BidPortal__line_182(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Tender_1, E_BP_Winner, IID_6, Report, VTP) :=
+	iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, initiate(BM, E_BP_TC, E_BP_Tender_1))))).
+	not(dishonest(E_BP_Actor)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 1, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=[exists IID_6]=>
+	child(E_BP_IID, IID_6).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 3, BM, E_BP_TC, E_BP_Tender_1, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP).
+	state_SubmissionTimer(dummy_agent, IID_6, 1)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=185; test=submission_phase_open)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=185; variable=SL; term=4)
+step step_018_BidPortal__line_185(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	state_BidPortal(E_BP_Actor, E_BP_IID, 3, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP).
+	submission_phase_open
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 4, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP).
+	submission_phase_open
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=187; sender=E_BP_Bidder_1; receiver=E_BP_Actor; payload=submission_request(E_BP_Bidder_1); channel=authCh; fact=iknows(sign(inv(ak(E_BP_Bidder_1)), pair(atag, pair(E_BP_Actor, submission_request(E_BP_Bidder_1))))); direction=receive)
+% @communication(entity=BidPortal; iid=E_BP_IID; line=188; sender=E_BP_Actor; receiver=E_BP_Bidder_1; payload=E_BP_Tender; fact=iknows(E_BP_Tender); direction=send)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=188; variable=SL; term=6)
+step step_019_BidPortal__line_187(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_1, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	iknows(sign(inv(ak(E_BP_Bidder_1)), pair(atag, pair(E_BP_Actor, submission_request(E_BP_Bidder_1))))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 4, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	iknows(E_BP_Tender).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 6, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder_1, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=189; sender=E_BP_Bidder; receiver=E_BP_Actor; payload=application(E_BP_Bidder, E_BP_Tender, E_BP_FP_1, E_BP_TP_1); channel=secCh; fact=iknows(crypt(ck(E_BP_Actor), sign(inv(ak(E_BP_Bidder)), pair(stag, pair(E_BP_Actor, application(E_BP_Bidder, E_BP_Tender, E_BP_FP_1, E_BP_TP_1)))))); direction=receive)
+% @introduce(entity=BidPortal; iid=E_BP_IID; line=190; fact=contains(E_BP_Bidder, applicants))
+% @introduce(entity=BidPortal; iid=E_BP_IID; line=191; fact=contains(application(E_BP_Bidder, E_BP_Tender, E_BP_FP_1, E_BP_TP_1), applications))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=191; variable=SL; term=3)
+step step_020_BidPortal__line_189(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_FP_1, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_1, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	iknows(crypt(ck(E_BP_Actor), sign(inv(ak(E_BP_Bidder)), pair(stag, pair(E_BP_Actor, application(E_BP_Bidder, E_BP_Tender, E_BP_FP_1, E_BP_TP_1)))))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 6, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	contains(E_BP_Bidder, applicants).
+	contains(application(E_BP_Bidder, E_BP_Tender, E_BP_FP_1, E_BP_TP_1), applications).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 3, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP_1, E_BP_TP_1, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=185; test=not(submission_phase_open))
+% @communication(entity=BidPortal; iid=E_BP_IID; line=194; sender=E_BP_Actor; receiver=BM; payload=applicants_ready; channel=authCh; fact=iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(BM, applicants_ready)))); direction=send)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=194; variable=SL; term=10)
+step step_021_BidPortal__line_185(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	not(submission_phase_open).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 3, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(BM, applicants_ready)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 10, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=195; sender=BM; receiver=E_BP_Actor; payload=eligible_applicants_ready; channel=authCh; fact=iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, eligible_applicants_ready)))); direction=receive)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=195; variable=SL; term=11)
+step step_022_BidPortal__line_195(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, eligible_applicants_ready)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 10, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 11, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=197; test=contains(E_BP_Bidder_3, eligible_applicants))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=197; variable=SL; term=12)
+step step_023_BidPortal__line_197(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_3, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(E_BP_Bidder_3, eligible_applicants).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 11, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	contains(E_BP_Bidder_3, eligible_applicants).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 12, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder_3, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=198; test=contains(application(E_BP_Bidder, Dummy_2, Dummy_3, E_BP_TP_2), applications))
+% @introduce(entity=BidPortal; iid=E_BP_IID; line=199; fact=contains(pair(E_BP_Bidder, E_BP_TP_2), eligible_technical_proposals))
+% @retract(entity=BidPortal; iid=E_BP_IID; line=202; fact=contains(E_BP_Bidder, eligible_applicants))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=202; variable=SL; term=11)
+step step_024_BidPortal__line_198(Applications, BM, Dummy_2, Dummy_3, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_2, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(E_BP_Bidder, eligible_applicants).
+	contains(application(E_BP_Bidder, Dummy_2, Dummy_3, E_BP_TP_2), applications).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 12, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	contains(application(E_BP_Bidder, Dummy_2, Dummy_3, E_BP_TP_2), applications).
+	contains(pair(E_BP_Bidder, E_BP_TP_2), eligible_technical_proposals).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 11, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP_2, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=198; test=not(contains(application(E_BP_Bidder, Dummy_2, Dummy_3, E_BP_TP_2), applications)))
+% @retract(entity=BidPortal; iid=E_BP_IID; line=202; fact=contains(E_BP_Bidder, eligible_applicants))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=202; variable=SL; term=11)
+step step_025_BidPortal__line_198(Applications, BM, Dummy_2, Dummy_3, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_2, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(E_BP_Bidder, eligible_applicants).
+	not(contains(application(E_BP_Bidder, Dummy_2, Dummy_3, E_BP_TP_2), applications)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 12, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 11, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=197; test=not(contains(E_BP_Bidder_3, eligible_applicants)))
+% @communication(entity=BidPortal; iid=E_BP_IID; line=206; sender=E_BP_Actor; receiver=E_BP_TC; payload=eligible_technical_proposals_ready; channel=authCh; fact=iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(E_BP_TC, eligible_technical_proposals_ready)))); direction=send)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=206; variable=SL; term=16)
+step step_026_BidPortal__line_197(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_3, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	not(contains(E_BP_Bidder_3, eligible_applicants)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 11, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(E_BP_TC, eligible_technical_proposals_ready)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 16, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=207; sender=E_BP_TC; receiver=E_BP_Actor; payload=technical_reports_ready; channel=authCh; fact=iknows(sign(inv(ak(E_BP_TC)), pair(atag, pair(E_BP_Actor, technical_reports_ready)))); direction=receive)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=207; variable=SL; term=17)
+step step_027_BidPortal__line_207(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	iknows(sign(inv(ak(E_BP_TC)), pair(atag, pair(E_BP_Actor, technical_reports_ready)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 16, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 17, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=212; test=contains(pair(E_BP_Bidder_4, eval(E_BP_TP_3)), technical_reports))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=212; variable=SL; term=18)
+step step_028_BidPortal__line_212(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_4, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_3, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(pair(E_BP_Bidder_4, eval(E_BP_TP_3)), technical_reports).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 17, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	contains(pair(E_BP_Bidder_4, eval(E_BP_TP_3)), technical_reports).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 18, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder_4, E_BP_Winner, Report, E_BP_FP, E_BP_TP_3, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=214; test=contains(application(E_BP_Bidder, Dummy_4, E_BP_FP_2, E_BP_TP), applications))
+% @introduce(entity=BidPortal; iid=E_BP_IID; line=216; fact=contains(pair(E_BP_Bidder, pair(E_BP_FP_2, eval(E_BP_TP))), financial_reports))
+% @retract(entity=BidPortal; iid=E_BP_IID; line=218; fact=contains(pair(E_BP_Bidder, eval(E_BP_TP)), technical_reports))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=218; variable=SL; term=17)
+step step_029_BidPortal__line_214(Applications, BM, Dummy_4, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_FP_2, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(application(E_BP_Bidder, Dummy_4, E_BP_FP_2, E_BP_TP), applications).
+	contains(pair(E_BP_Bidder, eval(E_BP_TP)), technical_reports).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 18, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	contains(application(E_BP_Bidder, Dummy_4, E_BP_FP_2, E_BP_TP), applications).
+	contains(pair(E_BP_Bidder, pair(E_BP_FP_2, eval(E_BP_TP))), financial_reports).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 17, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP_2, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=214; test=not(contains(application(E_BP_Bidder, Dummy_4, E_BP_FP_2, E_BP_TP), applications)))
+% @retract(entity=BidPortal; iid=E_BP_IID; line=218; fact=contains(pair(E_BP_Bidder, eval(E_BP_TP)), technical_reports))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=218; variable=SL; term=17)
+step step_030_BidPortal__line_214(Applications, BM, Dummy_4, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_FP_2, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	contains(pair(E_BP_Bidder, eval(E_BP_TP)), technical_reports).
+	not(contains(application(E_BP_Bidder, Dummy_4, E_BP_FP_2, E_BP_TP), applications)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 18, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 17, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=212; test=not(contains(pair(E_BP_Bidder_4, eval(E_BP_TP_3)), technical_reports)))
+% @communication(entity=BidPortal; iid=E_BP_IID; line=221; sender=E_BP_Actor; receiver=BM; payload=financial_reports_ready; channel=authCh; fact=iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(BM, financial_reports_ready)))); direction=send)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=221; variable=SL; term=22)
+step step_031_BidPortal__line_212(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_4, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_3, E_BP_Tender, E_BP_Winner, Report, VTP) :=
+	not(contains(pair(E_BP_Bidder_4, eval(E_BP_TP_3)), technical_reports)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 17, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(BM, financial_reports_ready)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 22, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @communication(entity=BidPortal; iid=E_BP_IID; line=222; sender=BM; receiver=E_BP_Actor; payload=E_BP_Winner_1; channel=authCh; fact=iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, E_BP_Winner_1)))); direction=receive)
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=222; variable=SL; term=23)
+step step_032_BidPortal__line_222(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_FP, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_Tender, E_BP_Winner, E_BP_Winner_1, Report, VTP) :=
+	iknows(sign(inv(ak(BM)), pair(atag, pair(E_BP_Actor, E_BP_Winner_1)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 22, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 23, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner_1, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=224; test=contains(application(E_BP_Bidder_5, E_BP_Tender_2, E_BP_FP_3, E_BP_TP_4), applications))
+% @communication(entity=BidPortal; iid=E_BP_IID; line=226; sender=E_BP_Actor; receiver=E_BP_Bidder_5; payload=E_BP_Winner; channel=authCh; fact=iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(E_BP_Bidder_5, E_BP_Winner)))); direction=send)
+% @retract(entity=BidPortal; iid=E_BP_IID; line=227; fact=contains(application(E_BP_Bidder_5, E_BP_Tender_2, E_BP_FP_3, E_BP_TP_4), applications))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=227; variable=SL; term=23)
+step step_033_BidPortal__line_224(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_5, E_BP_FP, E_BP_FP_3, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_4, E_BP_Tender, E_BP_Tender_2, E_BP_Winner, Report, VTP) :=
+	contains(application(E_BP_Bidder_5, E_BP_Tender_2, E_BP_FP_3, E_BP_TP_4), applications).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 23, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	iknows(sign(inv(ak(E_BP_Actor)), pair(atag, pair(E_BP_Bidder_5, E_BP_Winner)))).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 23, BM, E_BP_TC, E_BP_Tender_2, Applications, E_BP_Bidder_5, E_BP_Winner, Report, E_BP_FP_3, E_BP_TP_4, VTP)
+
+% @guard(entity=BidPortal; iid=E_BP_IID; line=224; test=not(contains(application(E_BP_Bidder_5, E_BP_Tender_2, E_BP_FP_3, E_BP_TP_4), applications)))
+% @step_label(entity=BidPortal; iid=E_BP_IID; line=224; variable=SL; term=26)
+step step_034_BidPortal__line_224(Applications, BM, E_BP_Actor, E_BP_Bidder, E_BP_Bidder_5, E_BP_FP, E_BP_FP_3, E_BP_IID, E_BP_TC, E_BP_TP, E_BP_TP_4, E_BP_Tender, E_BP_Tender_2, E_BP_Winner, Report, VTP) :=
+	not(contains(application(E_BP_Bidder_5, E_BP_Tender_2, E_BP_FP_3, E_BP_TP_4), applications)).
+	state_BidPortal(E_BP_Actor, E_BP_IID, 23, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+	=>
+	state_BidPortal(E_BP_Actor, E_BP_IID, 26, BM, E_BP_TC, E_BP_Tender, Applications, E_BP_Bidder, E_BP_Winner, Report, E_BP_FP, E_BP_TP, VTP)
+
+% @introduce(entity=SubmissionTimer; iid=E_BP_ST_IID; line=173; fact=submission_phase_open)
+% @step_label(entity=SubmissionTimer; iid=E_BP_ST_IID; line=173; variable=SL; term=2)
+step step_035_SubmissionTimer__line_173(E_BP_ST_Actor, E_BP_ST_IID) :=
+	not(dishonest(E_BP_ST_Actor)).
+	state_SubmissionTimer(E_BP_ST_Actor, E_BP_ST_IID, 1)
+	=>
+	state_SubmissionTimer(E_BP_ST_Actor, E_BP_ST_IID, 2).
+	submission_phase_open
+
+% @introduce(entity=SubmissionTimer; iid=E_BP_ST_IID; line=174; fact=break)
+% @retract(entity=SubmissionTimer; iid=E_BP_ST_IID; line=175; fact=submission_phase_open)
+% @step_label(entity=SubmissionTimer; iid=E_BP_ST_IID; line=175; variable=SL; term=4)
+step step_036_SubmissionTimer__line_174(E_BP_ST_Actor, E_BP_ST_IID) :=
+	state_SubmissionTimer(E_BP_ST_Actor, E_BP_ST_IID, 2).
+	submission_phase_open
+	=>
+	break.
+	state_SubmissionTimer(E_BP_ST_Actor, E_BP_ST_IID, 4)
+
+section goals:
+
+% @goal(name=eligibility; line=242)
+goal eligibility :=
+	G(not(completed(eve)))

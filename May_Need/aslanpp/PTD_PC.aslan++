@@ -1,0 +1,671 @@
+% Scenario: Process Task Delegation (PTD) in a workflow
+%---------- PC < ----------
+% Scene: Patient Consent required by A2,
+% when Doctor C, who s logged in at A1,
+% wishes to obtain Data about Patient P from A2.
+% P has a trust relationship with A2.
+%---------- > PC ----------
+
+% The Client C talks over a server-side authenticated channel and presents
+% his credential over it (usually that means: username/password over HTTPS).
+% For simplicity, we model this authentication step via a digital signature.
+
+% At the beginning of the workflow, A1 presents some set of possible "choices",
+%---------- PC * ----------
+% out of which C chooses one. This choice determines the choice of A2.
+
+% For securing the communication between A1 and A2, which is routed via C,
+% the Applications cannot rely on the hop-by-hop transport security
+% because C cannot be trusted. Therefore encryption and MACs using
+% a symmetric key are used to ensure end-to-end security between A1 and A2.
+
+% C can see the TaskHandle in order to extract the name of A2 from it, but
+% for SSO scenarios the intruder should not be able to see the TaskHandle.
+% Therefore, we use confidential channels between A1 and C, and between C and A2.
+
+%---------- PC * ----------
+specification PTC_PC channel_model CCM
+
+entity Environment {
+
+  symbols %% generic stuff and agent names
+    noninvertible mac (symmetric_key, message): message;
+    noninvertible genuine_ts (agent): fact;
+    noninvertible trustServer(agent): agent; % the Trust Server of an Application
+%---------- PC * ----------
+    c0, p0, a1, a2: agent; %%% workaround just for old-style session instantiation
+
+%---------- PC * ----------
+  entity Session (C, P, A1, A2: agent) {
+
+    types
+      details  < message;
+      metadata < message;
+      result   < message;
+      authorization < message;
+      order    < message;
+      tick     < message;
+
+    macros
+      authenticated_message (M,A) = {M}_inv(pk(A)); %% signature is just
+      %% one possbility (allowing for non-repudiation), or use username/password
+%---------- PC < ----------
+      signed_message (M,T,A) = {T.M}_inv(pk(A)); % digital signature
+    symbols
+      nonpublic t0, t1, t2: tick;   %timestamps for the signatures of C and P and A2
+%---------- PC < ----------
+
+    %% the messages names/tags
+    symbols
+      workflow_request   (message): message;
+      noninvertible %% such that CL-AtSe's intruder cannot fiddle with the set!
+      choice_request     (choice set): message;
+      choice_response    (message): message;
+      session_request    (message): message;
+      session_response   (message): message;
+      task_invocation    (message): message;
+      token_request      (message): message;
+      fwd_token_request  (message): message;
+      fwd_token_response (message): message;
+      token_response     (message): message;
+      task_result        (message): message;
+      workflow_response  (message): message; %% needed to tag the result
+      %% to avoid spurious replay attacks/confusion with task_invocation
+      noninvertible client_part (result): result;
+%---------- PC < ----------
+      make_order(text,message,agent): order;
+      consent_request    (message): message;
+      consent_response   (message): message;
+      consent_notify     (message): message;
+      noninvertible short(text): text; % short form of text, but not necessarily a hash
+%---------- > PC ----------
+
+    %% declarations needed for the choice that A1 offers to C
+    types
+      choice < message;
+    symbols
+      choice1: choice;
+      choice2: choice;
+      determines (choice, agent): fact;
+
+    %% declarations needed for the ADT potentially weakend by the Trust Servers
+    symbols
+         make_ADT(text,message,agent): authorization;
+      initial_ADT(message,authorization): fact; % to be used only in A1 for specifying goals
+        final_ADT(message,authorization): fact; % to be used only in A2 for specifying goals
+      weaker (authorization, authorization): fact;
+      weaker0(authorization, authorization): fact; %% the explicit equivalent of weaker
+%%%  clauses  %%% disabled for now, as only supported by CL-AtSe
+%%%    weaker_refl: forall A. A->weaker(A);
+%%%    weaker_trans(A,B,C):   A->weaker(C) :- A->weaker(B) & B->weaker(C);
+%%%    weaker_base(A,B):      A->weaker(B) :- A->weaker0(B); %% weaker and weaker0 are equivalent.
+ %% The latter is just needed to circument a syntactical restrition wrt. explicit/implicit facts.
+
+
+%---------- PC * ----------
+    entity Client (Actor, P, A1: agent) { % Doctor C is not trusted!
+
+      symbols
+        Details: details;
+        Meta   : metadata;
+        Choices: choice set;
+        Choice : choice;
+        A2     : agent;
+        M      :                    agent*(trustServer(agent)*agent*agent*nat)*scrypt(symmetric_key,order);
+        MAC    : mac(symmetric_key, agent*(trustServer(agent)*agent*agent*nat)*scrypt(symmetric_key,order));
+        U      :                   (agent*agent*scrypt(symmetric_key,result)).
+                 mac(symmetric_key,(agent*agent*scrypt(symmetric_key,result)));
+        Result : result;
+%---------- PC < ----------
+        CS0: text;
+        CS0_short:                          short(text); 
+        CS       :                          short(text)*agent*agent*agent*agent; % Text of Consent
+        SignedCS : sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent);  % CS signed by P
+%---------- > PC ----------
+
+      body {
+        Details := fresh(); % the application contents part of the request
+        Meta    := fresh(); % the identification (AAA) part of the request
+
+        Actor ->* A1: authenticated_message(workflow_request(Details.Meta.Actor),Actor);
+        %% here, a signature simulates Client authentication with username and password
+        channel_goal auth_C_A1: Actor *-> A1: Details;
+        % checks if the request of the client is authentic
+        % S4: Explicit Client Authentication
+
+        % C obtains from A1 a list of choices and chooses one item
+%---------- PC < ----------
+        select {
+          on(A1 *-> Actor: choice_request(?Choices) %% the set is passed as a reference!
+             & ?Choices->contains(?Choice) %% nondeterministically take any element of Choices
+             & ?Choice->determines(?A2)): {} % C computes A2 here, needed in patient consent CS
+        }
+        secrecy_goal secret_Details: Actor, A1, A2: Details;
+        %% goal deferred to this position because of A2
+        % checks if the Details of the client's request are shared only with the applications
+        % S1: Data Confidentiality
+
+        CS0 := fresh(); % "plain text" info for Patient
+        CS  := (short(CS0),Actor,P,A1,A2);
+        Actor *->* P: consent_request (signed_message(CS0.CS,t0,Actor)); % fresh timestamp t0;
+        % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+        % S15: Non-Repudiation
+
+        select {
+          on (P *->* Actor: consent_response (?SignedCS)
+              & ?SignedCS = signed_message((?CS0_short,?,P,?,?),t1,P)): { 
+                               % check if P's name is also signer
+                               % only accept current timestamp t1
+            % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+            % S11: Consent Non-repudiation
+            % S12: Patient Consent
+            secrecy_goal secret_Consent: Actor, P, A1, A2: CS0_short; 
+            % checks if CS0_short remains known only by the Patient, the Client (Doctor C)
+            % and the two Applications.
+            % S13: Consent Confidentiality
+            
+            Actor *->* A1: choice_response(Choice.SignedCS);
+          }
+        }
+%---------- > PC ----------
+
+        % C learns A2 from A1
+        select {
+%---------- PC * ----------
+          on (A1 *->* Actor: task_invocation(?M.?MAC) & ?M=(A1,(?,A1,A2,?),?)): {}
+          %% RESTRICTION: cannot express that the same channel between C and A1 is used
+        }
+%---------- PC * ----------
+        % C forwards the task invocation to A2
+        Actor ->* A2: task_invocation(M.MAC);
+        channel_goal auth_C_A2: Actor *-> A2: Details; % part of SSO
+        % checks if the Details originate from the correct client identified by A1
+        % S7: Client Identity and Authentication Federation
+
+        % C forwards the task result from A2 to A1
+        A2 *-> Actor: task_result(?U);
+        Actor ->* A1: task_result( U); % we do not need authentic channel here
+
+        A1 *->* Actor: workflow_response(?Result);
+        %% RESTRICTION: cannot express that the same channel between C and A1 is used
+        channel_goal secure_A1_Result_C: A1 *->* Actor: Result;
+        % checks if the Results of A2 are shared by A1 only with the client
+        % and    if the Results of A2 are authentically transmitted from A1
+        % S1: Data Confidentiality
+        % S2: Data Authenticity for the Client
+        channel_goal auth_A2_C: A2 *-> Actor: Result;
+        % checks if the Results of A2 are authentic 
+        % S2: Data Authenticity for the Client
+
+        % C happily has got the final response on his request :-)
+       %assert all_finished: false; %%% just for executability testing!
+      }
+    }
+
+
+%---------- PC < ----------
+    entity Patient (Actor, C: agent) { % is not trusted!
+
+      symbols
+        A1, A2    : agent;
+        CS0, MD   :                                text;
+        CS0_short :                          short(text);
+        CS        :                          short(text)*agent*agent*agent*agent;
+        SignedCS  : sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent); % CS signed by P
+
+      body {
+        % P receives from C a Text asking for consent to invoking A2. P is to sign this. 
+        select {
+          on(C *->* Actor: consent_request (signed_message(?CS0.?CS,t0,C))   % check if 
+                                                     % signature is from C and is valid
+                                                     % only accept current timestamp t0
+             & ?CS = (?CS0_short,C,Actor,?A1,?A2)): {} % check C and P and learn A1 and A2
+        }
+        % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+        % S15: Non-Repudiation
+
+        % should also check if content of CS0+A2 is acceptable
+        SignedCS := signed_message(CS,t1,Actor);    % insert validity timestamp t1
+        secrecy_goal secret_Consent: C, Actor, A1, A2: CS0_short; 
+        % checks if CS0_short remains known only by the Patient, the Client (Doctor C)
+        % and the two Applications.
+        % S13: Consent Confidentiality
+        Actor *->* C: consent_response (SignedCS);
+        channel_goal auth_P_A2: Actor *-> A2: SignedCS;
+        % checks if the Patient's Consent is authentic
+        %    and if timestamp is unmodified
+        % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+        % cannot check if timestamp has expired
+        % S11: Consent Non-repudiation
+        % S17: Consent Authenticity
+        % S18: Consent Non-repudiation
+        % Secondary goal necessary for S19: Consent Freshness
+
+        % Then wait for notification from A2, containing MData about Data sent to C/A1
+        A2 -> Actor: consent_notify(crypt(pk(Actor), signed_message(?MD,t2,A2))); % decrypt, 
+                                                                      % check signature
+                                                                      % accept only fresh 
+                                                                      % timestamp t2
+        channel_goal secure_A2_MD_P: A2 *->* Actor: MD; 
+        % checks if the data MD (depending on Order and Result)
+        % is authentic and shared only between A2 and Patient P.
+        % S14: Notification Authenticity
+        % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+        % S15: Non-Repudiation
+        % S16: Notification Confidentiality
+        % here via signed&encrypted Email
+        % if signature is from A2 and is valid and fresh and content of MD is covered 
+        % by CS, then be satisfied, else go and alarm somebody suitable.
+      }
+    } % entity Patient
+%---------- > PC ----------
+
+
+    entity Application1 (Actor: agent) {
+
+      symbols
+        C, A2  : agent;
+        Details: details;
+        Meta   : metadata;
+        Choices: choice set;
+        Choice : choice;
+        ADT    : authorization; % Authorization Decision Token for A2's task
+        ADT0   : text;
+        SeqNr  : nat;
+        SKey   : symmetric_key;
+        TaskHandle: trustServer(agent)*agent*agent*nat; % aka SAML artefact, used to identify A2's task
+%---------- PC < ----------
+        P        : agent;
+        CS0_short:                                  short(text); 
+        SignedCS :         sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent); % CS signed
+        Details1 : details*sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent); 
+%---------- PC > ----------
+        Order  : order;
+        Order0 : text;
+        M      : agent*(trustServer(agent)*agent*agent*nat)*scrypt(symmetric_key,order);
+        R      : agent*agent*scrypt(symmetric_key,result);
+        Result :                                  result;
+
+      body {
+        ?C ->* Actor: authenticated_message(workflow_request(?Details.?Meta.?C),?C);
+        channel_goal auth_C_A1: C *-> Actor : Details;
+        % checks if the request of the client is authentic
+        % S4: Explicit Client Authentication
+        %% RESTRICTION: cannot directly express that after C has authenticated to A1,
+        %% a confidential channel between A1 and C is established here and used below
+
+        % A1 lets C choose an element of Choices
+        Choices := {choice1,choice2};
+        Actor *-> C: choice_request(Choices);
+        %% RESTRICTION: cannot express that the same channel between A1 and C is used
+        select {
+%---------- PC < ----------
+          on(C *->* Actor: choice_response(?Choice.?SignedCS) 
+                                         & ?Choice->determines(?A2)
+                           & ?SignedCS = signed_message((?CS0_short,?,?P,?,?),?,?) %% just for secrecy goal
+            ):
+            %% RESTRICTION: cannot express that the same channel between A1 and C is used
+          {
+            secrecy_goal secret_Consent: C, P, Actor, A2: CS0_short; 
+            % checks if CS0_short remains known only by the Patient, the Client (Doctor C)
+            % and the two Applications.
+            % S13: Consent Confidentiality
+            Details1 := (Details,SignedCS);
+%---------- > PC ----------
+            assert choice_is_valid: Choices->contains(Choice);
+            % checks for authentic transmission of the choice 
+          }
+        }
+        secrecy_goal secret_Details: C, Actor, A2: Details;
+        %% goal deferred to this position because of A2
+        % checks if the Details of the client's request are shared only with the applications
+        % S1: Data Confidentiality
+
+        % A1 is going to forward the request to A2 and contacts its Trust Server
+        % A1 pre-computes the ADT, which could also be done by TS1, based on Meta and C
+        ADT0 := fresh();
+        ADT  := make_ADT(ADT0,Meta,C);
+        secrecy_goal secret_ADT: Actor, trustServer(Actor), A2, trustServer(A2): ADT;
+        % checks if the ADT remains secret among the applications and their trust servers
+        % Secondary goal for S6: Authorization Management
+%---------- PC * ----------
+        Details1->initial_ADT(ADT); %% used to state weakening goal
+
+        % A1 obtains from its TS the session credentials for the communication with A2.
+        Actor *->* trustServer(Actor): session_request (ADT.A2);
+        channel_goal auth_A1_ADT_TS1: Actor *-> trustServer(Actor): ADT;
+        % checks if the ADT is transferred authentically from A1 to TS1
+        % Secondary goal necessary for S6: Authorization Management
+
+        select {
+          on(trustServer(Actor) *->* Actor: session_response(?TaskHandle.?SKey)
+             & ?TaskHandle = (trustServer(Actor),Actor,A2,?SeqNr)): {}
+        }
+        secrecy_goal secret_SKey: Actor, trustServer(Actor), A2, trustServer(A2): SKey;
+        % checks if the SKey remains secret among the applications and their trust servers
+        % and in particular the Client cannot use the SKey (and manipulate the Order)
+        % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+
+        % A1 creates the task invocation for A2 including session information and the application data
+        % which is integrity and confidentiality protected using the session key (SKey)
+        Order0     := fresh();
+%---------- PC * ----------
+        Order      := make_order(Order0,Details1,C); %% any term depending on Details1 and C
+        M          := (Actor,TaskHandle,scrypt(SKey,Order));
+
+        Actor *->* C: task_invocation (M.mac(SKey, M));
+        %% RESTRICTION: cannot express that the same channel between A1 and C is used
+        channel_goal secure_A1_Order_A2: Actor *->* A2: SKey.Order;
+        % checks if the Order obtained by A2 belongs to the corresponding session (identified by SKey)
+        % and    if the Order is authentic and sent by A1 on behalf of the client
+        % and    if the Order is shared only among A1 and A2
+        % S8: Secure Workflow Binding for Application 2
+        % S9: Application and Authorization Data Authenticity
+        % S10: Authorization Policy
+
+        % A1 receives (typically via C) the response of A2, which is the task result
+        select {
+          on(? ->* Actor: task_result(?R.mac(SKey, ?R))
+             & ?R = (A2,Actor,scrypt(SKey,?Result))):
+            %% RESTRICTION: cannot express that the same channel between A1 and C is used
+            channel_goal secure_A2_Result_A1: A2 *->* Actor: SKey.Result;
+            % checks if the results (encrypted with the SKey) sent by A2 and obtained by A1
+            %           are authentic and shared only among these and A2 is identifiable by A1
+            % and    if they belong to the correct session with the given client
+            % S3: Data Authenticity for Application 1
+            % S5: Secure Workflow Binding for Application 1
+          {}
+        }
+
+%---------- PC < ----------
+        %% As further line of defense A1 could check the patient consent and only
+        %% in the face of a valid consent, decrypt the results from A2 for Client Dr. C.
+        %% It still requires further deliberations, whether A1 should be required to
+        %% check the patient consent and in what manner this can be automated.
+        %% 
+        %% & ?SignedCS = signed_message((?CS0_short,C,?P,Actor,A2),t1,?P)   % checks the signature
+        %% A1 cannot check P's identity, C has checked that.
+        %% Note, that A1 should be able to check, if Details1 of Order resolve to P.
+        %% P also is the data subject of the results returned by A2.
+%---------- > PC ----------
+
+        % A1 forwards to C the part of the result relevant for C
+        %% Note that our channel goal for client_part(Result) does not include A2
+        %% as potentially knowing party. Thus our goal is stronger than needed.
+        Actor *->* C: workflow_response(client_part(Result));
+        %% RESTRICTION: cannot express that the same channel between A1 and C is used
+        channel_goal secure_A1_Result_C: Actor *->* C: client_part(Result);
+        % checks if the Results of A2 are shared by A1 only with the client
+        % and    if the Results of A2 are authentically transmitted from A1
+        % S1: Data Confidentiality
+        % S2: Data Authenticity for the Client
+      }
+    }
+
+
+    entity TrustServer1 (Actor: trustServer(agent)) {
+
+      symbols
+        A1,A2,TS2 : agent;
+        ADT, ADT' : authorization;
+        SeqNr     : nat;
+        SKey      : symmetric_key;
+        TaskHandle: trustServer(agent)*agent*agent*nat;
+
+      body {
+        % TS1 accepts request from any securely connected A1
+        ?A1 *->* Actor: session_request (?ADT.?A2);
+        channel_goal auth_A1_ADT_TS1: A1 *-> Actor: ADT;
+        % checks if the ADT is transferred authentically from A1 to TS1
+        % Secondary goal necessary for S6: Authorization Management
+        secrecy_goal secret_ADT: A1, Actor, A2, trustServer(A2): ADT;
+        % checks if the ADT remains secret among the applications and their trust servers
+        % Secondary goal for S6: Authorization Management
+
+        % TS1 generates a session pointer (TaskHandle) and a symmetric session key (Skey)
+        SeqNr := fresh();                  % may be guessable in certain scenarios
+        TaskHandle := (Actor,A1,A2,SeqNr); % may need to be secret in certain scenarios
+        SKey       := fresh();             % used to secure the A1-A2 connnection
+                                           % and to identify the session
+
+        secrecy_goal secret_SKey: A1, Actor, A2, trustServer(A2): SKey;
+        % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+        % checks if the SKey remains secret among the applications and their trust servers
+        % and in particular the Client cannot use the SKey (and manipulate the Order)
+        Actor *->* A1: session_response (TaskHandle.SKey);
+
+        % TS1 processes a request to provide the token (ADT) and SKey,
+        % actually learning the identity of TS2 at this point
+        select {
+          on(?TS2 *->* Actor: fwd_token_request (TaskHandle)
+             & genuine_ts(?TS2)): % note that the name of TS2 is not in the TaskHandle!
+          {
+            ADT' := fresh(); 
+            ADT'->weaker0(ADT); %% weaken ADT before forwarding it to TS2
+            Actor *->* TS2: fwd_token_response (TaskHandle.ADT'.SKey);
+            channel_goal auth_TS1_ADT_TS2: Actor *-> TS2: ADT';
+            % checks if the ADT is transferred authentically from TS1 to TS2
+            % Secondary goal necessary for S6: Authorization Management
+          }
+        }
+      }
+    }
+
+
+    entity Application2 (Actor: agent) {
+
+      symbols
+        C, A1  : agent;
+        MAC    : mac (symmetric_key, agent*(trustServer(agent)*agent*agent*nat)*
+                                     scrypt(symmetric_key,order));
+        TaskHandle:                        (trustServer(agent)*agent*agent*nat);
+        CryptedOrder:                scrypt(symmetric_key, order);
+        Order  : order;
+        Order0 : text;
+        Details: details;
+        ADT    : authorization;
+        SKey   : symmetric_key;
+        TI     : agent*(trustServer(agent)*agent*agent*nat)*scrypt(symmetric_key,order);
+        R      : agent*agent*scrypt(symmetric_key,result);
+        Result :                                  result;
+%---------- PC < ----------
+        Details1 : details*sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent);
+        CS0_short:                                  short(text);  
+        SignedCS :         sign(inv(pk(agent)),tick.short(text)*agent*agent*agent*agent);
+        P        : agent;
+        MD       : text;
+%---------- > PC ----------
+
+      body {
+        select {
+          on(? ->* Actor: task_invocation (?TI.?MAC) 
+             & ?TI = (?A1,?TaskHandle,?CryptedOrder)): {} 
+        }
+        %% A2 does not rely on the sender's identity, therefore using plain "?"
+        %  A2 does not need to check here that its name is in TaskHandle!
+
+        % A2 obtains from its token server TS2 (or maybe from TS1) the token and SKey
+        Actor *->* trustServer(Actor): token_request (TaskHandle);
+        select {
+          on(trustServer(Actor) *->* Actor: token_response (TaskHandle.?ADT.?SKey)
+             % A2 decypts TS2's response and checks if the decrypted data corresponds to the hashed data
+             &  CryptedOrder = scrypt(?SKey,?Order)                   % decrypts the Order
+           %%% would need to split reception here as workaround for pattern matching bug in OFMC
+             &        ?Order = make_order(?Order0,?Details1,?C)       % decomposes the Order
+             &  MAC = mac(?SKey, (A1,TaskHandle,scrypt(?SKey, ?Order))) % checks the mac
+             &  TaskHandle = (trustServer(A1),A1,?,?) 
+             % must do these checks to prevent attack on authenticating C?
+%---------- PC < ----------
+             & ?Details1 = ?Details.?SignedCS
+             & ?SignedCS = signed_message((?CS0_short,?C,?P,A1,Actor),t1,?P) % checks the signature
+                                                                             % correct name of P was checked by C
+                                                                             % accept only not outdated 
+%timestamp t1
+             % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!            
+             % S18: Consent Non-repudiation                  
+             % implementing (by signing the timestamp) S19: Consent Freshness
+             % Goal of checking, whether P has signed: 
+             % S13: Consent Confidentiality
+             % A2 cannot check P's identity, C has checked that.
+             % A2 must check if CS0_short is suitable
+             % Note, that A2 is able to check, if P belongs to the patients that A2 knows.
+             % Note, that A2 is able to check, if Details of Order resolve to P.
+%---------- > PC ----------
+            ):
+            channel_goal auth_TS2_ADT_A2: trustServer(Actor) *-> Actor: ADT;
+            % checks if the ADT is transferred authentically from TS2 to A2
+            % Secondary goal necessary for S6: Authorization Management
+
+            channel_goal auth_C_A2: C  *-> Actor: Details; %part of SSO
+            % checks if the Details originate from the correct client identified by A1
+            % S7: Client Identity and Authentication Federation
+
+            channel_goal secure_A1_Order_A2: A1 *->* Actor: SKey.Order;
+            % checks if the Order obtained by A2 belongs to the corresponding session (identified by SKey)
+            % and    if the Order is authentic and sent by A1 on behalf of the client
+            % and    if the Order is shared only among A1 and A2
+            % S8: Secure Workflow Binding for Application 2
+            % S9: Application and Authorization Data Authenticity
+            % S10: Authorization Policy
+
+%---------- PC < ----------
+            channel_goal auth_P_A2: P *-> Actor: SignedCS; 
+            % checks if the Patient's Consent is authentic
+            %    and if timestamp is unmodified
+            % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+            % S17: Consent Authenticity
+            % S18: Consent Non-repudiation
+            % Secondary goal necessary for S19: Consent Freshness
+          {
+            secrecy_goal secret_Consent: C, P, A1, Actor: CS0_short; 
+            % checks if CS0_short remains known only by the Patient, the Client (Doctor C)
+            % and the two Applications.
+            % S13: Consent Confidentiality
+%---------- > PC ----------
+            secrecy_goal secret_ADT: A1, trustServer(A1), Actor, trustServer(Actor): ADT;
+                                    % gets violated if TS1 is not genuine !!
+            % checks if the ADT remains secret among the applications and their trust servers
+            % Secondary goal for S6: Authorization Management
+%---------- PC * ----------
+            Details1->final_ADT(ADT); %% used to state weakening goal
+
+            secrecy_goal secret_SKey: A1, trustServer(A1), Actor, trustServer(Actor): SKey;
+            % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+            % checks if the SKey remains secret among the applications and their trust servers
+            % and in particular the Client cannot use the SKey (and manipulate the Order)
+            
+            secrecy_goal secret_Details: C, A1, Actor: Details;
+            % checks if the Details of the client's request are shared only with the applications
+            % S1: Data Confidentiality
+
+            % A2 performs the task requested by A1 and sends the result to A1, typically via C
+            Result := fresh();       %% should be depending on the Order etc.
+            R := (Actor,A1,scrypt(SKey,Result));
+            Actor *-> C: task_result(R.mac(SKey, R));
+            channel_goal auth_A2_C: Actor *-> C: client_part(Result);
+            % checks if the ResultsC of A2 are authentic
+            % S2: Data Authenticity for the Client
+            channel_goal secure_A2_Result_A1: Actor *->* A1: SKey.Result;
+            % checks if the results (encrypted with the SKey) sent by A2 and obtained by A1
+            %           are authentic and shared only among these and A2 is identifiable by A1
+            % and    if they belong to the correct session with the given client
+            % S3: Data Authenticity for Application 1
+            % S5: Secure Workflow Binding for Application 1
+
+%---------- PC < ----------
+            % Send notification to P, containing meta data about Data sent to C/A1
+            % via signed and encrypted Email
+            MD:= fresh(); %% in general, should be depending on Order and Result
+            Actor -> P: consent_notify(crypt(pk(P), signed_message(MD,t2,Actor))); 
+            % fresh timestamp t2; 
+            % encrypt message for privacy
+            % TODO: Formulate goal, as soon as it is clear, how to formulate non-repudiation goals!
+            % S15: Non-Repudiation
+            channel_goal secure_A2_MD_P: Actor *->* P: MD; 
+            % checks if the data MD (depending on Order and Result)
+            % is authentic and shared only between A2 and Patient P.
+            % S14: Notification Authenticity
+            % S16: Notification Confidentiality
+%---------- > PC ----------
+          }
+        }
+      }
+    }
+
+
+    entity TrustServer2 (Actor: trustServer(agent)) {
+
+      symbols
+        A1,A2,TS1 : agent;
+        SeqNr     : nat;
+        TaskHandle: trustServer(agent)*agent*agent*nat;
+        ADT, ADT' : authorization;
+        SKey      : symmetric_key;
+
+      body {
+        % TS2 accepts request from any securely connected A2
+        % for the session credentials generated by any genuine TS1
+        select {
+          on(?A2 *->* Actor: token_request (?TaskHandle)
+             & ?TaskHandle = (?TS1,?A1,?A2,?SeqNr)  % by construction: ?TS1=trustServer(?A1)
+                                %% A1 is needed just for the secrecy goals below
+             & genuine_ts(?TS1)): {
+            % TS2 in turn obtains the requested info from TS1
+            Actor *->* TS1: fwd_token_request  (TaskHandle);
+            TS1 *->* Actor: fwd_token_response (TaskHandle.?ADT.?SKey);
+            channel_goal auth_TS1_ADT_TS2: TS1 *-> Actor: ADT;
+            % checks if the ADT is transferred authentically from TS1 to TS2
+            % Secondary goal necessary for S6: Authorization Management
+
+            secrecy_goal secret_ADT: A1, TS1, A2, Actor: ADT;
+            % checks if the ADT remains secret among the applications and their trust servers
+            % Secondary goal for S6: Authorization Management
+
+            secrecy_goal secret_SKey: A1, TS1, A2, Actor: SKey;
+            % checks if the SKey remains secret among the applications and their trust servers
+            % and in particular the Client cannot use the SKey (and manipulate the Order)
+            % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+
+            % TS2 returns the requested info to A2
+            ADT' := fresh(); ADT'->weaker0(ADT); %% weaken ADT before before forwarding it to A2
+            Actor *->* A2: token_response(TaskHandle.ADT'.SKey);
+            channel_goal auth_TS2_ADT_A2: Actor *-> A2: ADT';
+            % checks if the ADT is transferred authentically from TS2 to A2
+            % Secondary goal necessary for S6: Authorization Management
+          }
+        }
+      }
+    }
+
+    body { %% of entity Session
+      genuine_ts (trustServer(A1));
+      genuine_ts (trustServer(A2));
+      choice1->determines(A2); %% for simplicity, always A2
+      choice2->determines(A2); %% for simplicity, always A2
+%---------- PC * ----------
+      new Client       (C, P, A1);
+      new Application1 (A1);
+      new TrustServer1 (trustServer(A1));
+      new Application2 (A2);
+      new TrustServer2 (trustServer(A2));
+%---------- PC * ----------
+      new Patient (P, C);
+    }
+
+%%%    goals  %%% disabled for now, as only supported by CL-AtSe
+%%%      weakened_ADT: forall Details ADT1 ADT2.
+%%%         [](Details->initial_ADT(ADT1) & Details->final_ADT(ADT2) => ADT2->weaker(ADT1));
+      % checks if the initial ADT has (at most) been weakened by the trust servers.
+      % S6: Authorization Management
+
+  }
+
+  body { %% of entity Environment
+%---------- PC < ----------
+    new Session(c0, p0, a1, a2); %% old-style session instantiation
+%   new Session( i, p0, a1, a2); % here, i=C tries manipulating the task_invocation
+%%% any C P A1 A2. Session(C, P, A1, A2) where !dishonest(A1) & !dishonest(A2);
+%---------- > PC ----------
+  }
+}
+

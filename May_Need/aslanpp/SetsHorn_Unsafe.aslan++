@@ -1,0 +1,44 @@
+% TESTED FEATURES: set operations, Horn clauses
+% EXPECTED OUTCOME: Unsafe
+% @clatse(--nb 3)
+specification SetsHorn_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		S, STemp : message set;
+		a, b, c : message;
+		M : message;
+		visited(message) : fact;
+		member1(message) : fact;
+		memberS(message) : fact;
+		finished: fact;
+
+	clauses
+		membershipS(S, M) :
+			memberS(M) :- S->contains(M); 
+                       % refers to local set S! Locality of S is not respected -> translator bug!
+
+		membership1(M) :
+			member1(M) :- memberS(M);
+
+	body
+	{
+		S := {a, b, c};
+		while (S->contains(?M)) {
+			S->remove(M);
+			STemp->add(M);
+			visited(M);
+		}
+		while (STemp->contains(?M)) {
+			STemp->remove(M);
+			S->add(M);
+		}
+		STemp->add(i); % but not i in S!
+		finished;
+	}
+
+	goals
+		g : finished => member1(i) & visited(a); 
+}

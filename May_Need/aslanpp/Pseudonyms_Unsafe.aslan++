@@ -1,0 +1,48 @@
+% TESTED FEATURES: pseudonyms
+% EXPECTED OUTCOME: Safe
+specification Pseudonyms_Unsafe 
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    nonpublic tok : message;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      Pseudo_b: public_key;
+    body {
+     [Actor] *->* B : tok;
+      secrecy_goal secret_tok: [Actor], B : tok; 
+      B      *->* [Actor]   : ?Pseudo_b;
+     [Actor] *->*  Pseudo_b :  tok; % translation bug! replace pk(Pseudo_b_1) by Pseudo_b_1
+    % iknows(defaultPseudonym(Actor, IID).crypt(Pseudo_b, sign(inv(defaultPseudonym(Actor, IID)), stag.Pseudo_b.tok)));
+    }
+  }
+
+  entity Bob(Actor : agent) {
+    symbols
+      NymA: public_key; 
+      Pseudo_b: public_key;
+    body {
+  %%% ?     ->  ?NymA; % would result in weird translation error: ERROR: org/avantssar/aslanpp/Symbols.g: node from line 0:0 no viable alternative at input 'INTRODUCE'
+   % [?NymA] *->*  Actor : tok; % does not yet work!
+      select { on(iknows(?NymA.crypt(pk(Actor), sign(inv(?NymA), stag.Actor.tok)))): {}} % this works!
+      secrecy_goal secret_tok : NymA, Actor : tok; 
+      Pseudo_b := fresh();
+   %  Actor *->* [NymA]             : Pseudo_b;                      % does not yet work!
+      iknows(crypt(NymA, sign(inv(ak(Actor)), stag.NymA.Pseudo_b))); % this works!
+   %% unrelated translation bug: somehow, an extra senseless iknows(...) fact is produced on the RHS here:
+   %%   iknows(pair(NymA_1, crypt(pk(E_B_Actor), sign(inv(NymA_1), pair(stag, pair(E_B_Actor, tok))))))
+   % [NymA] *->* [Actor]_[Pseudo_b] : tok;                                               % does not yet work!
+      select { on(iknows(NymA.crypt(Pseudo_b, sign(inv(NymA), stag.Pseudo_b.tok)))): {}} % this works!
+      iknows(tok); % give away the secret
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (b);
+  }
+}

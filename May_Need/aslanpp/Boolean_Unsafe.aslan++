@@ -1,0 +1,57 @@
+specification Boolean___Unsafe %% translator issue: should give a warning as name does not agree with file name!
+channel_model CCM
+
+entity Environment
+{
+  symbols
+%   Flag: fact; % this is ruled out meanwhile
+    Flag: message; % just for some meanwhile deactivated testing below
+
+    key: public_key; 
+
+  body
+  {
+    %key; % % this is ruled out meanwhile
+
+    iknows(crypt(key,i));
+
+    %iknows(sign(i,i));   % this is correctly ruled out meanwhile
+
+    Actor *-> i: key; 
+
+    %Actor ->* i: Flag; % this is correctly ruled out meanwhile
+
+    %i; % this would be a syntax error because we do not have message < fact. Okay.
+    % If uncommented, translator fails: Transformation failed: java.lang.IllegalArgumentException: Rewrite rule expects only facts. The term 'i' has type 'agent'.
+    % From v0.5.9 a nicer error message is given.
+
+    %Flag := Flag & !Flag; % this is a syntax error, because there are no logical operators in Terms.
+
+    %But don't we need a type bool with bool < message?
+    %Not strictly, because the user may define "bool" (or something similar).
+    %Yet he cannot use the constants "true" and "false" for his type.
+
+    %Flag := true; % this is ruled out meanwhile
+
+    %Flag;  %We do not allow variables in fact intro/retract
+
+    %if(Flag) {}  % This is ruled out by the translator
+
+    %if(Flag=true) {} % this is ruled out meanwhile
+
+    %if (?Flag=false) { }  % this is ruled out meanwhile
+
+    %select {
+    % on (?Flag=false): { } % this is ruled out meanwhile
+    %}
+
+    if(false | (true & (Actor!=i)))
+      assert should_not_report_attack_here: !((false | true) => false);
+
+    %assert quantifier_test1: exists A. A; % This is ruled out by the translator
+ 
+    assert quantifier_test2: exists A. !(true & A=A); %% all backends cannot handle this :-(
+
+  }
+
+}

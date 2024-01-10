@@ -1,0 +1,191 @@
+%% PROTOCOL: SAML v.2 Web SSO Profile
+%% VARIANT: IDP-initiated SSO Profile with front channels
+%% MODELER: Luca Compagna, Giancarlo Pellegrino, 
+%%          and Xavier Chantry, SAP Research, 2009
+
+role client( 
+    C, IdP, SP         : agent,
+    KIdP               : public_key,
+    Ch_C2IdP, Ch_IdP2C : channel,
+    Set_Ch_SP2C        : (agent.channel.channel) set,
+    URI                : protocol_id 
+) 
+played_by C
+def=
+  local           
+     State            : nat,
+     Ch_C2SP, Ch_SP2C : channel,
+     AnySP            : agent,
+     AnyURI           : protocol_id,      
+     IDaa, Resource   : text
+
+  const 
+     snd, rcv : channel
+
+  init State:=0 
+       
+  transition
+  1. State=0   /\ Ch_IdP2C(start)
+        =|>
+     State':=2 /\ snd(Ch_C2IdP, IdP, C.URI.SP)
+               /\ witness(C, SP, sp_c_uri,URI)
+
+  3. State=2   /\ rcv(Ch_IdP2C, IdP, IdP.AnyURI'.IDaa'.AnySP'.IdP.C.AnyURI') 
+               /\ in(AnySP'.Ch_C2SP'.Ch_SP2C', Set_Ch_SP2C) 
+        =|>
+     State':=4 /\ snd(Ch_C2SP', AnySP', IDaa'.IdP.AnyURI'.AnySP'.C)
+
+
+  4. State=4   /\ rcv(Ch_SP2C, AnySP, AnyURI'.Resource') 
+        =|>
+     State':=6 /\ request(C, SP, c_sp_resource, Resource')
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role serviceProvider (
+    C,SP             : agent,
+    Ch_SP2C, Ch_C2SP : channel,
+    Set_C_IdP        : (agent.agent.public_key) set,
+    Set_ConsumedAA   : (agent.text) set,
+    Set_URI          : (protocol_id) set
+)
+played_by SP
+def=
+  local   
+     State          :  nat,
+     URI            :  protocol_id,
+     IDaa, Resource :  text,
+     IdP            :  agent,
+     KIdP           :  public_key
+
+  const 
+     snd, rcv: channel         
+
+  init State:=1
+  
+  transition
+
+  %% NOTE: SP does not store info after executing 1. and thus:
+  %%       - when there is only IdP the following can be simplified 
+  %%         removing the prime from IdP and KIdP
+  1. State=1   /\ rcv(Ch_C2SP, C, IdP'.URI'.IDaa'.SP.IdP'.C.URI') 
+               /\ in(C.IdP'.KIdP', Set_C_IdP)
+               /\ not(in(IdP'.IDaa', Set_ConsumedAA))
+               /\ in(URI', Set_URI)
+     =|>
+     State':=3 /\ Resource':=new() 
+               /\ snd(Ch_SP2C, C, URI'.Resource')
+               /\ Set_ConsumedAA':= cons(IdP'.IDaa', Set_ConsumedAA)
+               /\ request(SP, C, sp_c_uri, URI')
+               /\ witness(SP, C, c_sp_resource, Resource')
+               /\ secret(Resource', c_sp_resource, {C,SP})
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role identityProvider (
+    C,IdP              :  agent,
+    KIdP               : public_key,
+    Ch_IdP2C, Ch_C2IdP : channel,
+    Set_URI_SP         : (protocol_id.agent) set
+)
+played_by IdP
+def=
+  local  
+     URI   :  protocol_id,
+     SP    :  agent,
+     State :  nat,
+     IDaa  :  text
+
+  const
+     snd, rcv: channel
+     
+  init State:=7
+  
+  transition
+  1. State=7   /\ rcv(Ch_C2IdP, C, C.URI'.SP') 
+               /\ in(URI'.SP', Set_URI_SP)
+     =|>
+     State':=9 /\ IDaa' := new() 
+	           /\ snd(Ch_IdP2C, C, IdP.URI'.IDaa'.SP'.IdP.C.URI')
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role enviroment()
+def=
+
+  local 
+        %% Maps client c to the channels it is using in sending 
+        %% authentication assertions to a given SP
+        Set_c_Ch_SP    : (agent.channel.channel) set,
+        %% Trusted SP for the identity provider idp
+        Set_idp_uri_sp : (protocol_id.agent) set,
+        %% Maps each client to its identity provider' name and public key
+        Set_C_IdP      : (agent.agent.public_key) set
+
+  const sp_c_uri,c_sp_resource,uri_i,uri_sp:  protocol_id,
+        c,idp,sp           :  agent,
+        c2idp_s1,idp2c_s1,
+        c2idp_s2,idp2c_s2,
+        c2i_2,i2c_2,
+        c2sp_2,sp2c_2      : channel,
+        kidp,ki            :  public_key,
+        n                  : text
+
+  init  
+  
+    %% Channel assumptions
+       confidential(idp, c2idp_s1)  
+    /\ weakly_authentic(c2idp_s1)
+    /\ authentic(idp, idp2c_s1)
+    /\ confidential(c, idp2c_s1)
+    /\ link(c2idp_s1, idp2c_s1)
+    /\ confidential(idp, c2idp_s2)  
+    /\ weakly_authentic(c2idp_s2)
+    /\ authentic(idp, idp2c_s2)
+    /\ confidential(c, idp2c_s2)
+    /\ link(c2idp_s2, idp2c_s2)
+    /\ unilateral_conf_auth(c, i, c2i_2, i2c_2)
+    /\ unilateral_conf_auth(c, sp, c2sp_2, sp2c_2)
+    
+    %% Set initialization
+    /\ Set_idp_uri_sp:={uri_sp.sp, uri_i.i}
+    /\ Set_c_Ch_SP:={i.c2i_2.i2c_2, sp.c2sp_2.sp2c_2}
+    /\ Set_C_IdP:={c.idp.kidp}
+              
+  intruder_knowledge={c, sp, idp, 
+                      kidp, ki, inv(ki), n, 
+                      uri_i, uri_sp, 
+					  c2i_2, i2c_2, c2sp_2, sp2c_2,acs}
+  
+  composition
+
+        client(c, idp, i, kidp, c2idp_s1, idp2c_s1, Set_c_Ch_SP, uri_i) 
+     /\ client(c, idp, sp, kidp, c2idp_s2, idp2c_s2, Set_c_Ch_SP, uri_sp) 
+     /\ serviceProvider(c, i, i2c_2, c2i_2, Set_C_IdP, {}, {uri_i})
+     /\ serviceProvider(c, sp, sp2c_2, c2sp_2, Set_C_IdP, {}, {uri_sp})
+     /\ identityProvider(c, idp, kidp, idp2c_s1, c2idp_s1, Set_idp_uri_sp)  
+     /\ identityProvider(c, idp, kidp, idp2c_s2, c2idp_s2, Set_idp_uri_sp)  
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+goal
+
+ secrecy_of c_sp_resource
+
+ authentication_on sp_c_uri
+ 
+ authentication_on c_sp_resource
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+enviroment()

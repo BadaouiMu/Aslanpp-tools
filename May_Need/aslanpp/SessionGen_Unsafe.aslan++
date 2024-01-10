@@ -1,0 +1,68 @@
+% TESTED FEATURES: symbolic sessions, if, equality test, channels
+% EXPECTED OUTCOME: Unsafe
+specification SessionGen_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  types
+	color < message;
+
+  symbols
+	alice, mary, melinda, laura : agent;
+        bob, cooper, samuel, peter : agent;
+        blue, yellow, orange, green, black, white, cyan : color;
+	female(agent) : fact;
+	male(agent) : fact;
+        likes(agent, color) : fact;
+        match(agent, agent) : fact;
+
+  entity Session (A, B: agent) {
+
+    entity Alice (Actor, B: agent) {
+        symbols 
+           C : color;
+
+	body {
+           if (male(B)) 
+             if (likes(Actor, ?C))
+               Actor *->* B : C;
+        }
+    }
+
+    entity Bob   (A, Actor: agent) { 
+        symbols
+           OwnC, OtherC : color;
+
+        body {
+           if (female(A)) {
+             A *->* Actor : ?OtherC;
+             if (likes(Actor, ?OwnC))
+               if (OwnC = OtherC)
+                 match(Actor, A);
+           }
+        }
+    }
+
+    body {
+      new Alice(A,B);
+      new Bob  (A,B);
+    }
+  }
+
+  body {
+    female(alice); likes(alice, blue);
+    female(mary); likes(mary, yellow);
+    female(melinda); likes(melinda, orange);
+    female(laura); likes(laura, green);
+    male(bob); likes(bob, black);
+    male(cooper); likes(cooper, white);
+    male(samuel); likes(samuel, cyan);
+    male(peter); likes(peter, orange);
+
+    any F M . Session(F, M) where female(F) & male(M);
+  }
+
+  goals
+    g : [](!exists A B . match(A, B));
+}

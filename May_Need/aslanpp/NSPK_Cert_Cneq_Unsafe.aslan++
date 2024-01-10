@@ -1,0 +1,110 @@
+% NSPK with Public Key Certificates / Horn Clause Use Case
+% @clatse(NO)
+
+specification NSPK_Cert_Cneq_Unsafe
+channel_model CCM 
+
+entity Environment {
+
+  symbols                    % Declare global symbols.
+    root_ca, ca: agent;      % certificate authorities.
+    c: agent;                % agent used as fake CA.
+    trusted_agent(agent): fact; 
+    trusted_pk(agent): fact;
+    issued(message): fact;
+    
+  macros                    % Macros improving readability.
+    A->signed(M) = {M}_inv(pk(A)).M; % Agent A signed M
+               % = sign(inv(pk(A)),M).M
+    
+    C->cert(A,PK) = C->signed(C.A.PK);    
+       % Abstract certificate without details, 
+       % like validity period, cert. purpose, etc.
+                                     
+  clauses                   % Horn Clauses deduce new facts                                                                        
+    trusted_pk_direct(C):           % Direct trust C's pk?
+    trusted_pk(C) :-                % If C is a trusted 
+    trusted_agent(C);               % certificate authority.
+
+    trusted_pk_cert_chain(A, B):    % Indirect trust C's pk?
+    trusted_pk(A) :-                % If we trust B's pk
+    trusted_pk(B) &                 % and know a certificate, 
+        issued(B->cert(A, pk(A)))   % we know a certificate,
+                                    % where B accredits A. 
+             % A's public key belongs to A. Recursion termin., 
+             % if B is trusted agent or no certificate is known.
+        & B!=A;  % in particular, no self-signed certs allowed.
+
+  entity Session (A, B: agent) {  
+
+    entity Alice (Actor, B: agent) {
+
+      symbols
+        Na, Nb: text;
+
+      body {
+        if(trusted_pk(B)) { % A talks to B if B's pk is trusted
+         
+           secret_Na:(Na) := fresh();
+           Actor  ->  B: {Na.Actor}_pk(B);    
+           B  ->  Actor: {Alice_authenticates_Bob:(Na).
+                          secret_Nb:(?Nb)}_pk(Actor);
+           Actor  ->  B: {Bob_authenticates_Alice:(Nb)}_pk(B);           
+        }
+      }
+    }
+
+    entity Bob (A, Actor: agent) {
+
+      symbols
+        Na, Nb: text;
+
+      body {
+        ? -> Actor: {?Na.?A}_pk(Actor);   % Bob learns A here!
+        if (trusted_pk(A)) { % B talks to A if A's pk is trusted         
+               
+          secret_Nb:(Nb) := fresh();
+          Actor  ->  A: {Alice_authenticates_Bob:(Na).Nb}_pk(A);
+          A  ->  Actor: {Bob_authenticates_Alice:(Nb)}_pk(Actor);
+          secret_Na:(Na) := Na; % Goal can only be given here,
+            % because A certainly is not authenticated before!
+        }
+      }
+    }
+
+    body {  % of Session.
+        issued(ca->cert(A ,pk(A)));  % Alice's cert. signed by CA.
+        issued(ca->cert(A ,pk(B)));  %   Bob's cert. signed by CA.
+        new Alice(A,B);
+        new Bob  (A,B);
+    }
+    
+    goals
+      secret_Na:(_) {A,B};                  % Okay. 
+      secret_Nb:(_) {A,B};                  % Attack found !
+     %%% May comment out the above secrecy goals such that
+     %%% the attack is printed on authentiation.
+      Alice_authenticates_Bob:(_) B *->> A; % Okay.
+      Bob_authenticates_Alice:(_) A *->> B; % Attack found !
+
+  } % end entity Session
+
+  body { % of Environment  
+    trusted_agent(root_ca); % We accept root_ca as trusted.
+    
+    issued(root_ca->cert(ca, pk(ca))); 
+               % Intermediate ca that signs user certs.
+               % ca's certificate is signed by root_ca.
+
+    issued(ca->cert(i, pk(i)));  % i's cert. signed by CA.
+    issued( c->cert(i, pk(i)));  % Intruder certificate 
+                                 % signed by non-trusted C.
+
+    % We need two sessions for Lowe's attack.
+    any A B. Session(A,B) where A!=B & A!=root_ca & B!=root_ca
+                                     & A!=     ca & B!=     ca;
+    any A B. Session(A,B) where A!=B & A!=root_ca & B!=root_ca
+                                     & A!=     ca & B!=     ca;
+  }
+} % end entity Environment
+

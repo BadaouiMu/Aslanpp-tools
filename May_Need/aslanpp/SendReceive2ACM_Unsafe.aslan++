@@ -1,0 +1,46 @@
+% @clatse(--nb 2)
+
+specification SendReceive2ACM_Unsafe
+channel_model ACM
+
+entity Environment
+{
+  symbols 
+    a, b, c: agent;
+    ch_A2B, ch_C2B, ch_C2B: channel;
+    nonpublic sync: message;
+
+  entity Alice(Actor, B : agent; Ch_A2B: channel) {
+    body {
+      Actor -Ch_A2B-> B: sync;
+    }
+  }
+
+
+  entity Bob(Actor, A: agent; Ch_A2B, Ch_C2B : channel) {
+    symbols
+      M : message;
+    body {
+      A -Ch_A2B-> Actor: sync;
+      ? -Ch_C2B-> Actor: ?M;
+      assert reached: false;
+    }
+  }
+
+  entity Initiator(Actor, B : agent, Ch_C2B: channel) {
+    symbols
+      M : message;
+    body {
+      M := fresh();
+      Actor -Ch_C2B-> B: M;
+    }
+  }
+
+  body {
+    new Alice    (a,b, ch_A2B        );
+    new Bob      (b,a, ch_A2B, ch_C2B);
+    new Initiator(c,b,         ch_C2B);
+    ch_A2B->   authentic_on(a);
+    ch_C2B->confidential_to(c);
+  }
+}

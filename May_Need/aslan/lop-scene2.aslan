@@ -1,0 +1,470 @@
+%% Specification: lop-scene2.aslan
+%% Modeler: Serena Ponta, SAP
+%% Documentation: Standalone-LOP.pdf
+%% Description :
+%% distinguishes between human and automated tasks
+%% and introduces the concept of principal propagation
+%% Properties: need to know, separation of duty, binding of duty, 
+%% data confidentiality, access control over automated task
+% @satmc(--mutex=1,--sc=false)
+% @ofmc(no)
+% @clatse(--nb 2)
+
+section signature:
+
+  %% user assignment between users an roles
+  user_to_role : user * role -> fact
+  %% potential owners: users or roles having the authorization to perform a task      
+  poto : userORrole * task_name -> fact  
+  %% excluded owners: users or roles fodibben from executing a task
+  exo : userORrole * task_name -> fact   
+  %% association between a task and the set of data in input and output
+  task_to_data : task_name * set * set -> fact
+  %% knowledge of a user on a data
+  aknows : entity * data -> fact
+
+  %% instance of a task
+  task : task_name * nat -> task_instance  
+  %% a user has the right to claim the execution of a task instance
+  canExecute : user * role * human_task_name -> fact  
+  %% a user is in charge of executing a task instance
+  granted : user * role * task_instance -> fact 
+  %% a task instance has been executed by a user 
+  executed : user * task_instance -> fact
+
+  %% a user has been delegated the permission to claim a task
+  delegated : user * role * human_task_name -> fact 
+  %% a role has the permission to delegate a task to another role
+  canDelegate : role * role * human_task_name -> fact 
+  
+  %% a service providing an automated task has been discovered 
+  service_discovered : automated_task_name * organization -> fact
+  %% a user has invoked an organization providing an automated task
+  invoked : user * role * organization * automated_task_name * channel * channel -> fact
+  %% msg(RS,S,R,D,C)" : the real sender RS in the name of the official sender S
+  %% sends to the receiver R the data C on the communication channel C
+  msg : entity * entity * entity * data * channel -> fact
+  %% a user has been propagated to an automated task
+  principal_propagated : user * role * automated_task_name -> fact
+  %% a user has executed a human task
+  principal_token : user * role * human_task_name -> fact
+
+  mc_pair : data * data -> data
+  contains : set * data -> fact
+  
+  %% a task instance is ready to be executed
+  ready : task_instance -> fact
+  %% a task has been executed   
+  done : task_instance -> fact
+  
+  entity > organization
+  entity > user    
+
+  data > object
+  data > set
+  
+  userORrole > user
+  userORrole > role
+
+  task_name > automated_task_name
+  task_name > human_task_name
+  
+
+section types:
+
+  N,N0,N1,N2,N3,N4,N5,N6,N7,N8: nat
+
+  %%  organizations
+  org0_bank,org1_checkexternalcreditworthiness1,
+  org2_checkexternalcreditworthiness2:organization
+  O: organization
+  
+  %% roles involved in executing the LOBP
+  r_bankmanager,r_clerkpreprocessor,r_clerkpostprocessor:role
+  R,R1,R2:role
+  srr:role %service role (technical)
+  
+  %% users available at the bank
+  u_mickael,u_alex,u_robert,u_john,u_paul:user
+  U,U0,U1,U2,U3,U4,U5,U6,U7:user
+  sru:user  %service user (technical user)
+  
+  account: object
+  field__iban,field__interestrate,field__account_customerid,
+  field__balance,field__acc_contractid:data
+
+  contract: object
+  field__contractid,field__product,field__signature,
+  field__approvaldate:data
+
+  customerdata: object
+  field__customerid,field__customername,field__gender,
+  field__ethnicgroup,field__loanamount,field__existingcustomer:data
+
+  externalscore: object
+  field__externalrating1,field__externalrating2:data
+
+  ratingreport: object
+  field__reportid,field__intrating,field__extrating,
+  field__rating_customerid:data
+
+  %%  tasks
+  ht1_selectbundledproduct,ht2_approveloan,ht3_signcontract,ht4_buildcustomerprofile,
+  ht5_openaccount,ht6_checkinternalrating,ht7_updateaccount,ht8_checkexternalrating,
+  ht9_inputcustomerdata:human_task_name
+  at1_checkexternalcreditworthiness1,at2_checkexternalcreditworthiness2:automated_task_name
+  T,T0,T1,T2,T3,T4,T5,T6,T7,T8:task_name
+  HT:human_task_name
+  AT:automated_task_name
+
+  %% Set of data in input and output to the tasks
+  in_ht1_selectbundledproduct,in_ht2_approveloan,in_ht3_signcontract,
+  in_ht4_buildcustomerprofile,in_ht5_openaccount,in_ht6_checkinternalrating,
+  in_ht7_updateaccount,in_ht8_checkexternalrating,in_ht9_inputcustomerdata,
+  in_at1_checkexternalcreditworthiness1,in_at2_checkexternalcreditworthiness2:set
+
+  out_ht1_selectbundledproduct,out_ht2_approveloan,out_ht3_signcontract,
+  out_ht4_buildcustomerprofile,out_ht5_openaccount,out_ht6_checkinternalrating,
+  out_ht7_updateaccount,out_ht8_checkexternalrating,out_ht9_inputcustomerdata,
+  out_at1_checkexternalcreditworthiness1,out_at2_checkexternalcreditworthiness2:set
+
+  Input, Output, Set, Set1 : set
+  
+  %channels
+  at1_checkexternalcreditworthiness1_send,at1_checkexternalcreditworthiness1_recv,
+  at2_checkexternalcreditworthiness2_send,at2_checkexternalcreditworthiness2_recv:channel
+  ChSnd,ChRcv:channel
+  
+  %% token to start the process execution
+  start_event:fact
+
+  %% auxiliary facts used to model the AND-split and AND-join in the workflow
+  fo1_exclusivechoice1,fo2_uncontrolledmerge1,fo3_paralleljoin1,
+  fo4_parallelsplit0_to_fo5_parallelsplit1,fo4_parallelsplit0_to_ht6_checkinternalrating,
+  fo5_parallelsplit1_to_at2_checkexternalcreditworthiness2,
+  fo5_parallelsplit1_to_at1_checkexternalcreditworthiness1,fo6_paralleljoin0:fact
+
+
+section inits:
+
+initial_state init1 := 
+  start_event.
+
+  %% user assignment
+  user_to_role(u_mickael,r_bankmanager).
+  user_to_role(u_alex,r_clerkpreprocessor).
+  user_to_role(u_robert,r_bankmanager).
+  user_to_role(u_john,r_clerkpreprocessor).
+  user_to_role(u_john,r_clerkpreprocessor).
+  user_to_role(u_paul,r_clerkpostprocessor).
+  user_to_role(u_alex,r_clerkpreprocessor).
+
+  %% associations between tasks and data and  data sets content
+  task_to_data(ht1_selectbundledproduct,in_ht1_selectbundledproduct,out_ht1_selectbundledproduct).
+     contains(out_ht1_selectbundledproduct,mc_pair(contract,field__product)).
+     contains(out_ht1_selectbundledproduct,mc_pair(contract,field__contractid)).
+     contains(in_ht1_selectbundledproduct,mc_pair(ratingreport,field__extrating)).
+     contains(in_ht1_selectbundledproduct,mc_pair(ratingreport,field__intrating)).
+     contains(in_ht1_selectbundledproduct,mc_pair(ratingreport,field__reportid)).
+     contains(in_ht1_selectbundledproduct,mc_pair(ratingreport,field__rating_customerid)).
+  task_to_data(ht2_approveloan,in_ht2_approveloan,out_ht2_approveloan).
+     contains(out_ht2_approveloan,mc_pair(contract,field__approvaldate)).
+	 contains(in_ht2_approveloan,mc_pair(contract,field__approvaldate)).
+	 contains(in_ht2_approveloan,mc_pair(contract,field__contractid)).
+  task_to_data(ht3_signcontract,in_ht3_signcontract,out_ht3_signcontract).
+     contains(out_ht3_signcontract,mc_pair(contract,field__signature)).
+	 contains(in_ht3_signcontract,mc_pair(contract,field__approvaldate)).
+	 contains(in_ht3_signcontract,mc_pair(contract,field__contractid)).
+	 contains(in_ht3_signcontract,mc_pair(contract,field__product)).
+  task_to_data(ht4_buildcustomerprofile,in_ht4_buildcustomerprofile,out_ht4_buildcustomerprofile).                 
+     contains(out_ht4_buildcustomerprofile,mc_pair(customerdata,field__existingcustomer)).
+     contains(in_ht4_buildcustomerprofile,mc_pair(customerdata,field__customerid)).
+	 contains(in_ht4_buildcustomerprofile,mc_pair(customerdata,field__loanamount)).
+  task_to_data(ht5_openaccount,in_ht5_openaccount,out_ht5_openaccount).
+     contains(out_ht5_openaccount,mc_pair(account,field__interestrate)).
+     contains(out_ht5_openaccount,mc_pair(account,field__balance)).
+     contains(out_ht5_openaccount,mc_pair(account,field__iban)).
+     contains(in_ht5_openaccount,mc_pair(customerdata,field__customername)).
+     contains(in_ht5_openaccount,mc_pair(customerdata,field__ethnicgroup)).
+     contains(in_ht5_openaccount,mc_pair(customerdata,field__gender)).
+     contains(in_ht5_openaccount,mc_pair(customerdata,field__customerid)).
+  task_to_data(ht6_checkinternalrating,in_ht6_checkinternalrating,out_ht6_checkinternalrating).
+     contains(out_ht6_checkinternalrating,mc_pair(ratingreport,field__intrating)).
+     contains(in_ht6_checkinternalrating,mc_pair(customerdata,field__customerid)).
+     contains(in_ht6_checkinternalrating,mc_pair(customerdata,field__loanamount)).
+  task_to_data(ht7_updateaccount,in_ht7_updateaccount,out_ht7_updateaccount).
+     contains(out_ht7_updateaccount,mc_pair(account,field__acc_contractid)).
+	 contains(in_ht7_updateaccount,mc_pair(account,field__interestrate)).
+	 contains(in_ht7_updateaccount,mc_pair(account,field__balance)).
+	 contains(in_ht7_updateaccount,mc_pair(account,field__iban)).
+  task_to_data(ht8_checkexternalrating,in_ht8_checkexternalrating,out_ht8_checkexternalrating).
+     contains(out_ht8_checkexternalrating,mc_pair(ratingreport,field__extrating)).
+	 contains(in_ht8_checkexternalrating,mc_pair(externalscore,field__externalrating2)).
+	 contains(in_ht8_checkexternalrating,mc_pair(externalscore,field__externalrating1)).
+  task_to_data(ht9_inputcustomerdata,in_ht9_inputcustomerdata,out_ht9_inputcustomerdata).
+     contains(out_ht9_inputcustomerdata,mc_pair(customerdata,field__ethnicgroup)).
+	 contains(out_ht9_inputcustomerdata,mc_pair(customerdata,field__customerid)).
+	 contains(out_ht9_inputcustomerdata,mc_pair(customerdata,field__gender)).
+	 contains(out_ht9_inputcustomerdata,mc_pair(customerdata,field__loanamount)).
+	 contains(out_ht9_inputcustomerdata,mc_pair(customerdata,field__customername)).
+  task_to_data(at1_checkexternalcreditworthiness1,in_at1_checkexternalcreditworthiness1,
+               out_at1_checkexternalcreditworthiness1).
+     contains(out_at1_checkexternalcreditworthiness1,mc_pair(externalscore,field__externalrating1)).
+	 contains(in_at1_checkexternalcreditworthiness1,mc_pair(customerdata,field__customerid)).
+  task_to_data(at2_checkexternalcreditworthiness2,in_at2_checkexternalcreditworthiness2,
+               out_at2_checkexternalcreditworthiness2).
+     contains(out_at2_checkexternalcreditworthiness2,mc_pair(externalscore,field__externalrating2)).
+     contains(in_at2_checkexternalcreditworthiness2,mc_pair(customerdata,field__customerid)).
+
+   %%  services (automated tasks) and their providers
+   service_discovered(at1_checkexternalcreditworthiness1,org1_checkexternalcreditworthiness1,
+                      at1_checkexternalcreditworthiness1_send,at1_checkexternalcreditworthiness1_recv).
+   service_discovered(at2_checkexternalcreditworthiness2,org2_checkexternalcreditworthiness2,
+	                  at2_checkexternalcreditworthiness2_send,at2_checkexternalcreditworthiness2_recv)
+
+section hornClauses:
+
+   %% potential owners
+  hc poto_ht1_selectbundledproduct:= 
+     poto(r_clerkpostprocessor,ht1_selectbundledproduct) 
+  hc poto_ht2_approveloan:= 
+     poto(r_bankmanager,ht2_approveloan) 
+  hc poto_ht3_signcontract:= 
+     poto(r_bankmanager,ht3_signcontract) 
+  hc poto_ht4_buildcustomerprofile:= 
+     poto(r_clerkpostprocessor,ht4_buildcustomerprofile) 
+  hc poto_ht5_openaccount:= 
+     poto(r_clerkpreprocessor,ht5_openaccount) 
+  hc poto_ht6_checkinternalrating:= 
+     poto(r_clerkpostprocessor,ht6_checkinternalrating) 
+  hc poto_ht7_updateaccount:= 
+     poto(r_clerkpreprocessor,ht7_updateaccount) 
+  hc poto_ht8_checkexternalrating:= 
+     poto(r_clerkpostprocessor,ht8_checkexternalrating) 
+  hc poto_ht9_inputcustomerdata:= 
+     poto(r_clerkpreprocessor,ht9_inputcustomerdata) 
+
+  %% flattening of the excluded owners defined over roles
+  hc user_forbidden_task(U,R,T) :=
+     exo(U,T) :- user_to_role(U,R), exo(R,T)
+
+  %% authorization of users to claim the execution of a task
+  hc rbac_ac (U,R,HT) := 
+     canExecute(U,R,HT) :-   user_to_role(U,R), poto(R,HT)
+
+  hc direct_ac (U,R,HT) := 
+     canExecute(U,R,HT) :-   user_to_role(U,R), poto(U,HT) 
+	 
+  hc permission_delegation_ac (U,R,HT) := 
+     canExecute(U,R,HT) :- delegated(U,R,HT)
+
+  %%  principal propagation
+  hc principal_propagation_at1_checkexternalcreditworthiness1(U,R) :=
+     principal_propagated(U,R,at1_checkexternalcreditworthiness1) :-
+     principal_token(U,R,ht4_buildcustomerprofile)
+
+  hc principal_propagation_at2_checkexternalcreditworthiness2(U,R) :=
+     principal_propagated(U,R,at2_checkexternalcreditworthiness2) :-
+     principal_token(U,R,ht4_buildcustomerprofile)
+
+  % condition for delegation of permission
+  hc permission_delegation_condition(R,R1,HT) := 
+      canDelegate(R,R1,HT) :- poto(R,HT)   
+
+
+section rules:
+
+  %% an agent authorized to execute a task
+  %% claims its execution
+  step authorize_task_execution(U,R,HT,N) :=
+       canExecute(U,R,HT).
+       ready(task(HT,N)). 
+       not(exo(U,HT))
+       =>
+       principal_token(U,R,HT).
+       granted(U,R,task(HT,N))
+
+  %% an agent in charge of performing a task
+  %% delegates its execution
+  step delegation(U,U1,R,R1,HT,N) :=
+       user_to_role(U1,R1).
+       granted(U,R,task(HT,N)).
+       not(exo(U1,HT)) &
+       not(equal(U,U1))
+       =>
+       granted(U1,R,task(HT,N)).
+       user_to_role(U1,R1)
+    
+   %% an agent delegates the permission
+   %% to claim a task
+   step grant_delegation_of_permission(U,U1,R,R1,HT) :=
+      canDelegate(R,R1,HT).
+      user_to_role(U,R).
+      user_to_role(U1,R1).
+      not(exo(U1,HT)) & 
+      not(equal(R,R1)) 
+      =>
+      delegated(U1,R,HT).
+      user_to_role(U,R).
+      user_to_role(U1,R1)
+
+  %% an agent executes a human task and thus 
+  %% knows the data in input and output
+  step htask_execution(U,R,HT,N,Input,Output) :=
+      granted(U,R,task(HT,N)).
+      task_to_data(HT,Input,Output)
+      =>
+      executed(U,task(HT,N)).
+      principal_token(U,R,HT).
+      aknows(U,Input).
+      aknows(U,Output).
+      done(task(HT,N)).
+      task_to_data(HT,Input,Output)
+	
+  %% an agent executes an automated task 
+  %% via principal propagation
+  step atask_execution_pp(U,R,AT,O,N,ChSnd,ChRcv,Input,Output):=
+       ready(task(AT,N)).
+       principal_propagated(U,R,AT).
+       service_discovered(AT,O,ChSnd,ChRcv).
+       task_to_data(AT,Input,Output)
+       =>
+	   msg(U,U,O,Input,ChSnd).
+       msg(O,O,U,Output,ChRcv).
+       aknows(O,Input).
+       aknows(O,Output).
+       invoked(U,R,O,AT).
+       done(task(AT,N)).
+       service_discovered(AT,O,ChSnd,ChRcv).
+       task_to_data(AT,Input,Output)
+
+  %% an automated task is executed by 
+  %% a service user (technical user)
+  step atask_execution_nopp(U,R,AT,O,N,ChSnd,ChRcv,Input,Output):=
+       ready(task(AT,N)).
+       not(principal_propagated(U,R,AT)).
+       service_discovered(AT,O,ChSnd,ChRcv).
+       task_to_data(AT,Input,Output)
+       =>
+	   msg(sru,sru,O,Input,ChSnd).
+       msg(O,O,sru,Output,ChRcv).
+       aknows(O,Input).
+       aknows(O,Output).
+       invoked(sru,srr,O,AT).
+       done(task(AT,N)).
+       service_discovered(AT,O,ChSnd,ChRcv).
+       task_to_data(AT,Input,Output)
+
+%% workflow execution
+
+  step w_fo1_exclusivechoice1(N0):=
+          done(task(ht3_signcontract,N0))=>
+          fo1_exclusivechoice1
+  step w_ht5_openaccount(N0):=
+          fo1_exclusivechoice1
+                =[exists N0]=>
+          ready(task(ht5_openaccount,N0))
+  step w_fo2_uncontrolledmerge1_ht5_openaccount(N0):=
+          done(task(ht5_openaccount,N0))=>
+          fo2_uncontrolledmerge1
+  step w_fo2_uncontrolledmerge1_fo1_exclusivechoice1:=
+          fo1_exclusivechoice1=>
+          fo2_uncontrolledmerge1
+  step w_ht7_updateaccount(N0):=
+          fo2_uncontrolledmerge1
+                =[exists N0]=>
+          ready(task(ht7_updateaccount,N0))
+  step w_ht9_inputcustomerdata(N0):=
+          start_event
+                =[exists N0]=>
+          ready(task(ht9_inputcustomerdata,N0))
+  step w_fo3_paralleljoin1(N0,N1):=
+          done(task(ht8_checkexternalrating,N0)).
+          done(task(ht6_checkinternalrating,N1))=>
+          fo3_paralleljoin1
+  step w_ht1_selectbundledproduct(N0):=
+          fo3_paralleljoin1
+                =[exists N0]=>
+          ready(task(ht1_selectbundledproduct,N0))
+  step w_ht4_buildcustomerprofile(N0,N1):=
+          done(task(ht9_inputcustomerdata,N0))
+                =[exists N1]=>
+          ready(task(ht4_buildcustomerprofile,N1))
+  step w_fo4_parallelsplit0(N0):=
+          done(task(ht4_buildcustomerprofile,N0))=>
+          fo4_parallelsplit0_to_fo5_parallelsplit1.
+          fo4_parallelsplit0_to_ht6_checkinternalrating
+  step w_ht6_checkinternalrating(N0):=
+          fo4_parallelsplit0_to_ht6_checkinternalrating
+                =[exists N0]=>
+          ready(task(ht6_checkinternalrating,N0))
+  step w_fo5_parallelsplit1:=
+          fo4_parallelsplit0_to_fo5_parallelsplit1=>
+          fo5_parallelsplit1_to_at2_checkexternalcreditworthiness2.
+          fo5_parallelsplit1_to_at1_checkexternalcreditworthiness1
+  step w_at1_checkexternalcreditworthiness1(N0):=
+          fo5_parallelsplit1_to_at1_checkexternalcreditworthiness1
+                =[exists N0]=>
+          ready(task(at1_checkexternalcreditworthiness1,N0))
+  step w_at2_checkexternalcreditworthiness2(N0):=
+          fo5_parallelsplit1_to_at2_checkexternalcreditworthiness2
+                =[exists N0]=>
+          ready(task(at2_checkexternalcreditworthiness2,N0))
+  step w_fo6_paralleljoin0(N0,N1):=
+          done(task(at2_checkexternalcreditworthiness2,N0)).
+          done(task(at1_checkexternalcreditworthiness1,N1))=>
+          fo6_paralleljoin0
+  step w_ht8_checkexternalrating(N0):=
+          fo6_paralleljoin0
+                =[exists N0]=>
+          ready(task(ht8_checkexternalrating,N0))
+  step w_ht2_approveloan(N0,N1):=
+          done(task(ht1_selectbundledproduct,N0))
+                =[exists N1]=>
+          ready(task(ht2_approveloan,N1))
+  step w_ht3_signcontract(N0,N1):=
+          done(task(ht2_approveloan,N0))
+                =[exists N1]=>
+          ready(task(ht3_signcontract,N1))
+		  
+section goals:
+
+  %% (S2) privacy (data austerity) 
+  attack_state  needToKnow_1(U,N0,Set):=
+              executed(U,task(ht6_checkinternalrating,N0)).
+              aknows(U,Set).
+              contains(Set,mc_pair(customerdata,field__customername))
+  attack_state  needToKnow_2(U,N0,Set):=
+              executed(U,task(ht6_checkinternalrating,N0)).
+              aknows(U,Set).
+              contains(Set,mc_pair(customerdata,field__gender))
+			  
+  %% (S3) workflow security (SoD)
+  attack_state  sod_1(U,N0,N1):=
+              executed(U,task(ht1_selectbundledproduct,N0)).
+              executed(U,task(ht3_signcontract,N1))
+	
+  %% (S4) workflow security (SoD)	
+  attack_state  bod_1(U0,U1,N0,N1):=
+              executed(U0,task(ht2_approveloan,N0)).
+              executed(U1,task(ht3_signcontract,N1))&
+              not(equal(U0,U1))
+
+  %% (S5) authorization policies (data confidentiality)
+  attack_state  dataConf_forbidden_principals_1(U,Set):=
+              aknows(U,Set).
+              contains(Set,mc_pair(ratingreport,field__intrating)).
+              user_to_role(U,r_clerkpreprocessor)
+  attack_state  dataConf_forbidden_principals_2(U,Set):=
+              aknows(U,Set).
+              contains(Set,mc_pair(ratingreport,field__extrating)).
+              user_to_role(U,r_clerkpreprocessor)
+
+  %% (S6) authorization policies (access control over automated task)
+  attack_state  accControlAutomatedTask_forbidden_principals_1(U,R,O):=
+              invoked(U,R,O,at1_checkexternalcreditworthiness1).
+              user_to_role(U,r_clerkpreprocessor)
+
+  attack_state  accControlAutomatedTask_forbidden_principals_2(U,R,O):=
+              invoked(U,R,O,at2_checkexternalcreditworthiness2).
+              user_to_role(U,r_clerkpreprocessor)

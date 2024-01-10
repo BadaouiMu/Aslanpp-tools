@@ -1,0 +1,66 @@
+specification Tuples_Concatenation_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  symbols
+    pk0: public_key;
+    l: protocol_id;
+
+    Precedence_test: agent. agent*agent; % should be parsed as:
+                   % agent.(agent*agent)
+
+    NonMsg_Tuple   :  agent*protocol_id; % a tuple that this not a subtype of message!
+    Normal_Tuple   :  agent*public_key ; % a tuple that is a subtype of message!
+    Compound_Tuple : (agent,public_key); % equivalent to the above!
+    Compound_Tuple2: (agent,pk(agent)) ; % a subtype  of the above!
+    Concat         :  agent.public_key ; % this is a subtype of message!
+
+  body {
+
+    NonMsg_Tuple    := (i,l  )        ; % ok
+    Normal_Tuple    := (i,pk0)        ; % ok
+    Normal_Tuple    := (i,pk0)        ; % ok
+    Compound_Tuple  := (i,pk0)        ; % ok
+    Compound_Tuple2 := (i,pk(i))      ; % ok
+    Concat          :=  i.pk0         ; % ok - but translator complains
+
+    Compound_Tuple  := Normal_Tuple   ; % ok
+    Normal_Tuple  := Compound_Tuple   ; % ok
+
+    Concat :=   Normal_Tuple          ; % not acceptable
+    Concat := Compound_Tuple          ; % not acceptable
+    Concat := Compound_Tuple2         ; % not acceptable
+
+      Normal_Tuple  := Concat         ; % not acceptable
+    Compound_Tuple  := Concat         ; % not acceptable
+
+      Normal_Tuple  := Compound_Tuple2; % ok
+    Compound_Tuple  := Compound_Tuple2; % ok
+
+  % Compound_Tuple2 := Compound_Tuple ; % not acceptable
+  % Compound_Tuple2 :=   Normal_Tuple ; % not acceptable
+  % Compound_Tuple2 :=   Concat       ; % not acceptable 
+
+
+    iknows(  NonMsg_Tuple )           ; % not acceptable
+    iknows(  Normal_Tuple )           ; % ok
+    iknows(Compound_Tuple )           ; % ok
+    iknows(Compound_Tuple2)           ; % ok
+    iknows(Concat)                    ; % ok
+
+    i -> Actor: ?NonMsg_Tuple         ; % not acceptable
+    i -> Actor: ?Normal_Tuple.
+                ?Compound_Tuple.
+                ?Compound_Tuple2.
+                ?Concat               ; % ok
+
+    Precedence_test := i.(i,i)        ; % ok - but translator complains
+
+    assert test: !( Precedence_test = i.i.i & 
+                    1.2.3   = (1,2,3)   & % message vs tuple not acceptable
+                 % (l,l,l)  = (l,(l,l)) & % of protocol_id types, not acceptable
+                    i.i.i  != (i.i).i  ); % of agent       types, ok
+  }
+}
+

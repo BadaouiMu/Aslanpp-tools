@@ -1,0 +1,53 @@
+% TESTED FEATURES: equality test, while, select, if
+% EXPECTED OUTCOME: Unsafe
+% @clatse(--nb 2)
+specification Equals_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  types
+    person < message;
+    document < message;
+    decision < message;
+
+  symbols
+    alice, bob : person;
+    doc1, doc2 : document;
+    correct, incorrect : decision;
+    marked(message) : fact;
+    accepted(person, document) : fact;
+    rejected(person, document) : fact;
+    Entry, SubEntry : message;
+    Who : person;
+    Doc : document;
+    Decision : decision;
+
+  body {
+    marked(alice.doc1.correct);
+    marked(bob.doc2.incorrect);
+
+    while (true) {
+      select {
+        on (marked(?Entry)) : {
+          if (Entry = ?Who.?SubEntry) {
+            if (SubEntry = ?Doc.?Decision) {
+              if (Decision = correct)
+                accepted(Who, Doc);
+              else
+                rejected(Who, Doc);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  goals
+     s : 
+       [](!exists Who1 Who2 Doc1 Doc2 . 
+         accepted(Who1,Doc1) & 
+          rejected(Who2, Doc2) & 
+          Who1 != Who2 & 
+          Doc1 != Doc2);
+}

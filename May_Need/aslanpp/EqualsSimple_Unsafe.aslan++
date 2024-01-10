@@ -1,0 +1,29 @@
+% TESTED FEATURES: equality test, select
+% EXPECTED OUTCOME: Unsafe
+specification EqualsSimple_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols
+    part1, part2, part3 : message;
+    M, P1, P2 : message;
+    seen(message) : fact;
+
+    Set_message: message set;
+    Set_agent: agent set;
+         		
+  body {
+    M := part1.part2;
+    select {
+      on (M = ?P1.?P2) : { 
+        if( i!=part1 & Set_message!=Set_agent)
+          seen(P1);
+        seen(P2);
+      }
+    }
+  }
+
+  goals
+    g : [](!(seen(part1) & seen(part2)));
+}

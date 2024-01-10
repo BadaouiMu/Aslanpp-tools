@@ -1,0 +1,33 @@
+% @clatse(NO)
+% @satmc(NO)
+% TESTED FEATURES: equations
+% EXPECTED OUTCOME: Unsafe
+specification Equations_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		m1, m2 : message;
+	        f1(message, message) : message;
+		nonpublic f2(message, message) : message;
+		alice : agent;
+
+	equations
+		f1(A, B) = f2(B, A);  %% all backends cannot handle this :-(
+
+	entity Alice(Actor : agent) 
+	{
+		%equations %% not allowed here (at non-root entity level)!
+		%      i.i=i;
+
+		body {
+                	iknows(f1(m1, m2));
+			secrecy_goal g: Actor : f2(m2, m1);
+		}
+	}
+
+	body {
+		new Alice(alice);
+	}
+}

@@ -1,0 +1,32 @@
+% TESTED FEATURES: lumping of transitions, facts introduction/retraction
+% EXPECTED OUTCOME: Unsafe
+specification LumpingFacts_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		submission_phase_open, f : fact;
+
+	entity SubmissionTimer {
+		breakpoints {submission_phase_open} body {
+			submission_phase_open;
+			retract submission_phase_open;
+		}
+	}
+
+	entity Other 
+	{
+		body {
+			f;
+		}
+	}
+
+	body {
+		new SubmissionTimer;
+		new Other;
+	}
+
+	goals
+		g : [](!(f & submission_phase_open));
+}

@@ -1,0 +1,51 @@
+% TESTED FEATURES: authentication goals with dishonest witnessing party
+% EXPECTED OUTCOME: Safe
+specification ChannelGoalsAuthDishonest_Safe
+channel_model CCM
+
+entity Environment
+{
+	symbols 
+		a, b : agent;
+		sync: text;
+
+	entity Alice(Actor, B : agent) {
+		symbols
+			Nonce, Payload : message;
+			token : message;
+
+		body {
+			Nonce := fresh();
+			Payload := token;
+
+			i -> Actor: i; % force a new transition rule
+
+			Actor *-> B : sync;
+			dishonest(Actor);
+
+			i -> Actor: i; % force a new transition rule
+
+			Actor -> B : Nonce.Payload;
+     			channel_goal Auth_a_b_nonce : Actor *-> B : Nonce;
+     			channel_goal Auth_a_b_payload : Actor *-> B : Payload;
+		}
+	}
+
+	entity Bob(Actor, A : agent) {
+		symbols
+			OtherNonce, OtherPayload : message;
+
+		body {
+			A *-> Actor : sync;
+
+			A -> Actor : ?OtherNonce.?OtherPayload;
+			channel_goal Auth_a_b_nonce : A *-> Actor : OtherNonce; 
+			channel_goal Auth_a_b_payload : A *-> Actor : OtherPayload; 
+		}
+	}
+
+	body {
+		new Alice(a, b); 
+		new Bob(b, a);
+	}
+}

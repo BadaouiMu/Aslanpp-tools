@@ -1,0 +1,248 @@
+specification pb_scene2 channel_model CCM
+%% Modeler: Yoann Lamy, OpenTrust 
+%% Documentation: Standalone-PB.pdf
+%% Description : 
+%% Involves two entities : Bidder, BP
+%% Secrecy properties: 
+%%     secrecy of the offers
+%%     non-repudiation of the offers
+%%     integrity of the offers
+%%     authentication of the participants  
+%% Options needed for tools:
+%% ASLan++ connector: -hc ALL
+%% SATMC: --enc=ltl-gp --only_stuttering=true
+%% OFMC: --classic --untyped
+%% CL-AtSe: --lvl 0 --nb 2  
+
+
+entity Environment {
+
+
+ types
+  
+  doc < message;
+
+
+ symbols
+  
+  %% Facts used for goals
+
+  %% for authentication
+  witness_auth(agent, agent, message) : fact;
+  request_auth(agent, agent, message) : fact;
+
+  %% for non repudiation
+  witness_non_repudiation(agent, agent, message) : fact;
+  request_non_repudiation(agent, agent, message) : fact;
+
+  %% for integrity
+  offer_added(agent, message, agent) : fact;
+  offer(agent, message) : fact;
+
+  %% Messages
+
+  nonpublic winner_request : message;
+  nonpublic submission_request (agent) : message;
+  hash (message) : message;
+
+
+  %% Participants
+  
+  bp, alice, eve : agent;
+
+
+ macros
+  
+  %% signed (A,M) : the signature of the message M by the agent A
+  signed(Agent,Message) = Message.sign(inv(pk(Agent)),hash(Message));
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ entity Bidder(Actor, BP: agent) {
+ 
+  symbols
+   Tender, FP, TP : doc;
+   Puk_BP : public_key;
+   Winner : agent;
+   
+ 
+  body {
+  
+   %% Submission phase
+   send(BP, submission_request(Actor));
+   %% fact for authentication between the BP and the Bidder
+   witness_auth(Actor, BP, submission_request(Actor));
+
+   %% the Bidder waits for the application form from the BP
+   receive(BP,signed(BP,Actor.?Tender.?Puk_BP));
+   %% fact for authentication
+   request_auth(BP, Actor, signed(BP,Actor.Tender.Puk_BP));
+
+   FP := fresh();
+   TP := fresh();
+   %% The Bidder sends his offer
+   send(BP,signed(Actor,crypt(Puk_BP,Tender).
+        crypt(Puk_BP,FP).
+        crypt(Puk_BP,TP)));
+   %% secrecy of offers
+   secrecy_goal secret_TP : Actor, BP : TP;
+   secrecy_goal secret_FP : Actor, BP : FP;
+   %% fact for non repudiation
+   witness_non_repudiation(Actor,BP,signed(Actor,crypt(Puk_BP,Tender).
+        crypt(Puk_BP,FP).
+        crypt(Puk_BP,TP)));
+   %% fact for integrity
+   offer(Actor, signed(Actor,crypt(Puk_BP,Tender).
+        crypt(Puk_BP,FP).
+        crypt(Puk_BP,TP)));
+   
+   %% Decision phase
+   send(BP,winner_request);
+   receive(BP,signed(BP,?Winner));
+   assert process_completed : false; %% for executability testing
+  }
+ }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ entity BidPortal(Actor : agent, Are_Eligible_Bidders : agent set) {
+    
+  symbols
+   submission_phase_open : fact;
+   announcement_phase_on : fact;
+   noninvertible winner((agent, doc, doc) set) : agent;
+	   
+   Applications : (agent,doc,doc,doc) set;
+   List_of_Bidders : agent set;
+   Eligible_applicants : agent set;
+   Financial_and_reports : (agent, doc, doc) set;
+   Known_Bidders : agent set;
+	
+   Tender, FP, TP : doc;
+   Bidder, Bidder2 : agent;
+   Report_TP : doc;
+   Doc1 : doc;
+  
+  %% Sub entity of the Bidding Portal:
+  %% Timer used for the submission phase
+  entity SubmissionTimer {
+   
+   breakpoints {
+      submission_phase_open
+   }
+  
+   body {
+    
+    submission_phase_open;
+    retract submission_phase_open;
+   }
+  }
+
+    
+  body {
+   
+   new SubmissionTimer;
+   Tender := fresh();
+   %% Initialization of sets Applications,
+   %% Known_Bidders and List_of_Bidders
+   Known_Bidders := {};
+   Applications := {};
+   List_of_Bidders := {};
+         
+   while (submission_phase_open) {
+    select {
+     %% 1- The BP waits for the submission request of one bidder 
+     %% and sends the application form 
+     on (receive(?Bidder,submission_request(?Bidder))) : {
+      %% fact for authentication
+      request_auth(Bidder,Actor,submission_request(Bidder));
+      send(Bidder, signed(Actor,Bidder.Tender.pk(Actor)));
+      %% fact for authentication
+      witness_auth(Actor,Bidder,signed(Actor,Bidder.Tender.pk(Actor)));
+      Known_Bidders->add(Bidder);
+     }
+     %% 2- The BP waits for the upload of one Bidder's offer
+     on ((receive(?Bidder,signed(?Bidder,crypt(pk(Actor),Tender).
+                            crypt(pk(Actor),?FP).crypt(pk(Actor),?TP))))
+          & (!(List_of_Bidders->contains(?Bidder))) 
+          & (Known_Bidders->contains(?Bidder))) :{ 
+      %% fact for non repudiation
+      request_non_repudiation(Actor,Bidder,signed(Bidder,crypt(pk(Actor),Tender).
+                        crypt(pk(Actor),FP).crypt(pk(Actor),TP)));
+      Applications->add((Bidder,Tender,FP,TP));
+      offer_added(Actor, signed(Bidder,crypt(pk(Actor),Tender).
+                        crypt(pk(Actor),FP).crypt(pk(Actor),TP)), Bidder);
+      List_of_Bidders->add(Bidder);
+      %% secrecy of offers
+     secrecy_goal secret_TP : Actor, Bidder : TP;
+     secrecy_goal secret_FP : Actor, Bidder : FP;
+     }
+    }
+   }
+   
+  %% Evaluation phase
+  Eligible_applicants := {};
+  %% Creation of the list of eligible Bidders
+  if (List_of_Bidders->contains(?Bidder)) {
+   while(List_of_Bidders->contains(?Bidder)) {
+     if (Are_Eligible_Bidders->contains(Bidder)) {
+       Eligible_applicants->add(Bidder);
+     }
+     List_of_Bidders->remove(Bidder);
+   } 
+   Financial_and_reports := {};
+   %% Creation of the technical proposals reports
+   while (Eligible_applicants->contains(?Bidder)) {
+     if (Applications->contains((Bidder,?Doc1,?FP,?TP))) {
+       Report_TP:=fresh();
+       Financial_and_reports->add((Bidder,FP,Report_TP));
+     }
+     Eligible_applicants->remove(Bidder);
+   }
+
+   %% Decision phase
+
+     %% Announcement
+    announcement_phase_on;
+    while (announcement_phase_on) {
+      receive(?Bidder,winner_request);
+      if (Financial_and_reports->contains((?Bidder2,?FP,?Report_TP)))
+        send(Bidder,signed(Actor,winner(Financial_and_reports)));
+    }   
+  }
+ }
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+ body {
+ 
+  new BidPortal(bp,{alice});
+  new Bidder(alice,bp);
+  new Bidder(eve,bp);
+ } 
+
+ goals
+
+  %% OK_non-repudiation
+  S2_non_repudiation : forall A B M.
+          [] (request_non_repudiation(B,A,signed(A,M)) 
+                => (witness_non_repudiation(A,B,signed(A,M)))); 
+%%                => <->(witness_non_repudiation(A,B,signed(A,M)))); 
+
+  %% OK_integrity
+  S3_integrity : forall Bidder BP M.
+          [] ((offer_added(BP, M, Bidder))
+                => (offer(Bidder, M)));
+%%                => <->(offer(Bidder, M)));
+
+  %% OK_authentication
+  S4_authentication : forall A B M.
+          [] (request_auth(A,B,M) 
+                => (witness_auth(A,B,M)));
+%%                => <->(witness_auth(A,B,M)));
+
+}
+

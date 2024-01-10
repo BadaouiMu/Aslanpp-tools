@@ -1,0 +1,44 @@
+% TESTED FEATURES: secrecy goals and their retraction for dishonest parties
+% EXPECTED OUTCOME: Safe
+specification SecrecyGoalsCompromised_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      nonpublic tok : message;
+      IID' : nat;
+    body {
+      Actor *->* B : secret_token:(tok);
+    % secrecy_goal secret_token: Actor, B : tok;
+
+    % compromising Alice:
+      dishonest(Actor);
+      iknows(inv(pk(Actor)));
+      select{ on(child(?IID',IID)): secret_token_set(IID')->add(i); } % this works
+      % putting the add(i) behind the iknows(tok) instruction would enable attack
+    %retract secret(?,?,secret_token_set(?)); % this does not help/work
+      iknows(tok);
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      Tok : message;
+    body {
+      A *->* Actor : secret_token:(?Tok);
+    % secrecy_goal secret_token: A, Actor : Tok;
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+  goals
+    secret_token:(_) {a, b};
+}

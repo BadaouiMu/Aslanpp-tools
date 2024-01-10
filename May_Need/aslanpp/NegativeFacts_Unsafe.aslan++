@@ -1,0 +1,48 @@
+% TESTED FEATURES: negative conditions with matches
+% EXPECTED OUTCOME: Unsafe
+specification NegativeFacts_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+		peter, melinda, laura : agent;
+		reg : agent;
+		token : message;
+		accepted(agent) : fact;
+
+	entity Client(Actor, Reg : agent)
+	{
+		body {
+			Actor *->* Reg : token;
+		}
+	}
+
+	entity Registry(Actor : agent)
+	{
+		symbols
+			Banned : agent set;
+			Sender : agent;
+
+		body
+		{
+			Banned := {peter, melinda};
+			select {
+				on (?Sender *->* Actor : token &
+					!Banned->contains(?Sender)) : {
+					accepted(Sender);
+				}
+			}
+		}
+	}
+
+	body {
+		new Client(peter, reg);
+		new Client(melinda, reg);
+		new Client(laura, reg);
+		new Registry(reg);
+	}
+
+	goals
+		g : [](!accepted(laura));
+}

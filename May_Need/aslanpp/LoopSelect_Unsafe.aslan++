@@ -1,0 +1,39 @@
+% TESTED FEATURES: while, select
+% EXPECTED OUTCOME: Unsafe
+specification LoopSelect_Unsafe
+channel_model CCM
+
+entity Env
+{
+  symbols
+    peter, john : agent;
+    empStarted(agent) : fact;
+
+  entity Employee(Actor : agent)
+  {
+    symbols
+      Token : message;
+
+    body {
+      while (true) {
+        select {
+          on (true) : {
+            Token := fresh();   % If you switch the order of these two lines
+            empStarted(Actor);  % then SATMC will find the attack.
+          }
+        }
+      }
+    }
+  }
+
+  body {
+    new Employee(peter);
+    new Employee(john);
+  }
+
+  goals
+    g : [](!exists E1 E2 .
+           empStarted(E1) &
+           empStarted(E2) &
+           E1!=E2); 
+}

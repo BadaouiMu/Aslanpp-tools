@@ -1,0 +1,31 @@
+% TESTED FEATURES: LTL goals
+% EXPECTED OUTCOME: Unsafe
+
+specification LTL_request_witness_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  symbols a, b: agent;
+
+    entity Alice (Actor, B: agent) {
+      body {
+        Actor  ->  B: i;
+        channel_goal Alice_Bob_i:
+        Actor *-> B: i; 
+      }
+    }
+
+    entity Bob (A, Actor: agent) {
+      body {
+        A -> Actor: i;
+        channel_goal Alice_Bob_i:
+        A *-> Actor: i; 
+       }
+    }
+
+  body {
+        new Alice(a,b);
+        new Bob  (a,b);
+  }
+}

@@ -1,0 +1,39 @@
+% TESTED FEATURES: channels, equality test, if
+% EXPECTED OUTCOME: Safe
+specification Channels_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		alice, bob : agent;
+		token : message;
+		alice_ok(agent) : fact;
+
+	entity Alice(Actor, Bob : agent)
+        {
+		symbols
+			M : message;
+
+                body {
+		Bob *-> Actor : ?M;
+		if (M = token)
+			alice_ok(Actor);
+                }
+	}
+
+	entity Bob(Actor, Alice : agent, M : message)
+	{
+		body {
+			Actor -> Alice : M;
+		}
+	}
+
+	body {
+		new Alice(alice, bob);
+		new Bob(bob,alice,token);
+	}
+	
+	goals
+		trouble : [](!alice_ok(alice));
+}

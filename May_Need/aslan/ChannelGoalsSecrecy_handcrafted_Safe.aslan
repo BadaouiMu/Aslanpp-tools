@@ -1,0 +1,160 @@
+% Specification: ChannelGoalsSecrecy_Safe
+% Channel model: CCM
+% Goals as attack states: yes
+% Orchestration client: N/A
+% Horn clauses level: ALL
+% Optimization level: LUMP
+% Stripped output (no comments and line information): no
+section signature:
+	message > text
+	ak : agent -> public_key
+	ck : agent -> public_key
+	defaultPseudonym : agent -> agent
+	descendant : nat * nat -> fact
+	dishonest : agent -> fact
+	isAgent : agent -> fact
+	pk : agent -> public_key
+	secr_secr_a_b_set : nat -> set(agent)
+	sign : private_key * message -> message
+	state_Alice : agent * nat * nat * agent -> fact
+	state_Bob : agent * nat * nat * agent -> fact
+	state_Environment : agent * nat * nat -> fact
+
+section types:
+	A : agent
+	Actor : agent
+	Ak_arg_1 : agent
+	B : agent
+	Ck_arg_1 : agent
+	Descendant_Closure_arg_1 : nat
+	Descendant_Closure_arg_2 : nat
+	Descendant_Closure_arg_3 : nat
+	E_A_Actor : agent
+	E_A_IID : nat
+	E_A_SL : nat
+	E_B_Actor : agent
+	E_B_IID : nat
+	E_B_SL : nat
+	IID : nat
+	IID_1 : nat
+	IID_2 : nat
+	Knowers : set(agent)
+	Msg : message
+	Pk_arg_1 : agent
+	SL : nat
+	Sign_arg_1 : private_key
+	Sign_arg_2 : message
+	a : agent
+	atag : text
+	b : agent
+	ctag : text
+	dummy_agent : agent
+	dummy_nat : nat
+	false : fact
+	secr_secr_a_b : protocol_id
+	stag : text
+	tok : message
+	true : fact
+
+section inits:
+
+initial_state init :=
+	dishonest(i).
+	iknows(a).
+	iknows(atag).
+	iknows(b).
+	iknows(ctag).
+	iknows(i).
+	iknows(inv(ak(i))).
+	iknows(inv(ck(i))).
+	iknows(inv(pk(i))).
+	iknows(stag).
+	isAgent(a).
+	isAgent(b).
+	isAgent(i).
+	state_Environment(dummy_agent, dummy_nat, 1).
+	true
+
+section hornClauses:
+
+	hc public_ck(Ck_arg_1) :=
+		iknows(ck(Ck_arg_1)) :-
+			iknows(Ck_arg_1)
+
+	hc public_ak(Ak_arg_1) :=
+		iknows(ak(Ak_arg_1)) :-
+			iknows(Ak_arg_1)
+
+	hc public_pk(Pk_arg_1) :=
+		iknows(pk(Pk_arg_1)) :-
+			iknows(Pk_arg_1)
+
+	hc public_sign(Sign_arg_1, Sign_arg_2) :=
+		iknows(sign(Sign_arg_1, Sign_arg_2)) :-
+			iknows(Sign_arg_1),
+			iknows(Sign_arg_2)
+
+	hc inv_sign(Sign_arg_1, Sign_arg_2) :=
+		iknows(Sign_arg_2) :-
+			iknows(sign(Sign_arg_1, Sign_arg_2))
+
+	hc descendant_closure(Descendant_Closure_arg_1, Descendant_Closure_arg_2, Descendant_Closure_arg_3) :=
+		descendant(Descendant_Closure_arg_1, Descendant_Closure_arg_3) :-
+			descendant(Descendant_Closure_arg_1, Descendant_Closure_arg_2),
+			descendant(Descendant_Closure_arg_2, Descendant_Closure_arg_3)
+
+section rules:
+
+% line 29
+% new instance
+%     new Alice(a,b)
+% lumped line 30 (skipped step label 2)
+% new instance
+%     new Bob(b,a)
+step step_1_Environment__line_29(Actor, IID, IID_1, IID_2) :=
+	state_Environment(Actor, IID, 1)
+	=[exists IID_1, IID_2]=>
+	descendant(IID, IID_1).
+	descendant(IID, IID_2).
+	contains(a, secr_secr_a_b_set(IID)).
+	contains(b, secr_secr_a_b_set(IID)).
+	state_Alice(a, IID_1, 1, b).
+	state_Bob(b, IID_2, 1, a).
+	state_Environment(Actor, IID, 3)
+
+% line 14
+% introduce facts
+%     iknows(crypt(ck(B),sign(inv(ak(E_A_Actor)),stag.B.tok)))
+%     secret(tok,secr_secr_a_b,{E_A_Actor, B})
+step step_2_Alice__line_14(B, E_A_Actor, IID, E_A_IID) :=
+	descendant(IID, E_A_IID).
+	state_Alice(E_A_Actor, E_A_IID, 1, B)
+	=>
+	iknows(crypt(ck(B), sign(inv(ak(E_A_Actor)), pair(stag, pair(B, tok))))).
+	secret(tok, secr_secr_a_b, secr_secr_a_b_set(IID)).
+	state_Alice(E_A_Actor, E_A_IID, 2, B)
+
+% line 21
+% introduce facts
+%     secret(tok,secr_secr_a_b,{A, E_B_Actor})
+% retract facts
+%     iknows(crypt(ck(E_B_Actor),sign(inv(ak(A)),stag.E_B_Actor.tok)))
+% lumped line 23 (skipped step label 2)
+% introduce facts due to lumping
+%     iknows(tok)
+step step_3_Bob__line_21(A, E_B_Actor, IID, E_B_IID) :=
+	descendant(IID, E_B_IID).
+	iknows(crypt(ck(E_B_Actor), sign(inv(ak(A)), pair(stag, pair(E_B_Actor, tok))))).
+% secret(tok, secr_secr_a_b, secr_secr_a_b_set(IID)).
+	state_Bob(E_B_Actor, E_B_IID, 1, A)
+	=>
+  contains(i, secr_secr_a_b_set(IID)).
+	iknows(tok).
+	state_Bob(E_B_Actor, E_B_IID, 3, A)
+
+section goals:
+
+attack_state secr_secr_a_b(Knowers, Msg) :=
+	iknows(Msg).
+	not(contains(i, Knowers)).
+	secret(Msg, secr_secr_a_b, Knowers)

@@ -1,0 +1,40 @@
+% TESTED FEATURES: strengthened channel authentication goals
+% EXPECTED OUTCOME: Unsafe
+specification ChannelGoalsAuth2_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols 
+		a, b : agent;
+
+	entity Alice(Actor, B : agent) {
+		symbols
+			Nonce: text;
+		body {
+			Nonce := fresh();
+			Actor ->* B : Nonce;
+     			channel_goal Auth_a_b_nonce : Actor *-> B : Nonce;
+		}
+	}
+
+	entity Bob(A, Actor : agent) {
+		symbols
+			OtherNonce: text;
+		body {
+			A ->* Actor : ?OtherNonce;
+			channel_goal Auth_a_b_nonce : A *-> Actor : OtherNonce; 
+		}
+	}
+
+	body {
+		new Alice(a, b);
+		new Bob  (i, b);
+	}
+	goals
+    strengthened_authentication: 
+       forall A B P M IID. [](request(B,A,P,M,IID) =>
+                               (% <-> % The O operator is not correctly handled by the backends, but not needed here!
+                                  (witness(A,B,P,M))  
+                                | (dishonest(A) => M=atag ))); %iknows(M);
+}

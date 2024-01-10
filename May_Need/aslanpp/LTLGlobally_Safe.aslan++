@@ -1,0 +1,21 @@
+% TESTED FEATURES: LTL goals
+% EXPECTED OUTCOME: Safe
+specification LTLGlobally_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		prop, tick1, tick2, tick3 : fact;
+
+	breakpoints { prop, tick1, tick2, tick3 }
+	body {
+		prop;
+		tick1;
+		tick2;
+		tick3;
+	}
+
+	goals
+		g : [](tick1 => <->(prop));
+}

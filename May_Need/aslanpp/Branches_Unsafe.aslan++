@@ -1,0 +1,35 @@
+% TESTED FEATURES: if, else
+% EXPECTED OUTCOME: Unsafe
+specification Branches_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+		f1, f2, f3 : fact;
+		g1, g2 : fact;
+		
+		c1, c2, c3, c4: fact;
+		myThen1, myElse1, myThen2, myElse2 : fact;
+
+	body
+	{
+		f1;
+		f2;
+		if (f1)
+			if (f2)
+				if (f3)
+					g1;
+				else
+					g2;
+
+		c1;
+		c3;
+		%the below combination of "if" statements get mixed on translation, but seems correct
+		if (c1 & (c2 | c3)) myThen1; else myElse1;
+		if (c4)             myThen2; else myElse2;
+	}
+
+	goals
+		safe : [](!(g2 & !g1 & myThen1 & !myThen2 & !myElse1 & myElse2));
+}

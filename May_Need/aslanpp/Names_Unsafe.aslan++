@@ -1,0 +1,29 @@
+% TESTED FEATURES: variable names
+% EXPECTED OUTCOME: Unsafe
+specification Names_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		A, A1, A_, A' : message;
+		token' : message;
+		f1'(message) : fact;
+		f2'(message) : fact;
+		f3'(message) : fact;
+		f4'(message) : fact;
+
+	body {
+		A := token';
+		A1 := token';
+		A_ := token';
+		A' := token';
+		f1'(A);
+		f2'(A1);
+		f3'(A_);
+		f4'(A');
+	}
+
+	goals
+		Goal_Uppercase_Name' : [](!(f1'(token') & f2'(token') & f3'(token') & f4'(token')));
+}

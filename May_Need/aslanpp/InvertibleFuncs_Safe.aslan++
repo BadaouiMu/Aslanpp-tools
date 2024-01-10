@@ -1,0 +1,38 @@
+% TESTED FEATURES: invertible functions, channels
+% EXPECTED OUTCOME: Safe
+specification InvertibleFuncs_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		alice, bob : agent;
+		nonpublic token1, token2 : message;
+		noninvertible my_op(message,message):message;
+		bad(agent) : fact;
+
+	entity Alice(Actor, Partner : agent) {
+	       body {
+	          Actor -> Partner : my_op(token1, token2);
+	       }
+	}
+
+	entity Bob(Actor : agent) {
+	       symbols
+		  Partner : agent;
+		  M : message;
+
+	       body {
+	          ?Partner -> Actor : token1.token2;
+		  bad(Actor);
+	       }
+	}
+
+	body {
+	     new Alice(alice, bob);
+	     new Bob(bob);
+	}
+
+	goals
+		g : [](!bad(bob));
+}

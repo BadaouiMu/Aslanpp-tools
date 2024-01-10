@@ -1,0 +1,14 @@
+% TESTED FEATURES: private functions
+% EXPECTED OUTCOME: Safe
+specification PrivateFuncsSimple_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+	    nonpublic my_fnc(message) : message;
+	    token : message;
+
+	goals
+	    g : [](!iknows(my_fnc(token)));
+}

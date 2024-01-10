@@ -1,0 +1,25 @@
+% @clatse(--not_hc)
+% TESTED FEATURES: Horn Clauses in positive goal facts (negative attack states)
+specification Horn_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols
+    a(nat) : fact;
+    b(nat,nat) : fact;
+
+  clauses
+    h(N)   : forall M. b(N,M) :- a(N); %% OFMC cannot handle this universal quantification
+% misleading error message: ofmc-core: The Hornclauses may have run into a non-termination---giving up.
+  % h(N)   : b(N,1) :- a(N);
+
+  body {
+       a(0);
+  }
+
+  goals
+  % should_be_fine: [](a(0) => forall Y. b(0,Y)); %% translator should also recognize this as attack state
+    should_be_fine: forall Y. [](a(0) => b(0,Y)); %% OFMC cannot handle above universal quantification
+  % should_be_fine: forall Y. [](a(0) => b(0,1));
+}

@@ -1,0 +1,63 @@
+% @verbatim(Modifiable contents of shared database)
+% @ofmc(NO)
+
+specification SharedDB_Unsafe
+channel_model CCM 
+
+entity Environment {
+
+  entity Session(A,B: agent) {
+
+    symbols
+      SharedDB: agent*text*nat set;   % Contents global for 
+                                            % Alice and Bob
+
+    entity Alice(Actor,B: agent, 
+                            SharedDB: agent*text*nat set) {
+
+      symbols
+        Nonce: text;
+      body {
+        Nonce:=fresh();
+        SharedDB->add((Actor,Nonce,0));   % add entry to DB
+        Actor *->  B: Nonce;                % handover to B
+        B *->  Actor: ?;                  % handover from B
+        if (SharedDB->contains((B,?,1))) {
+           SharedDB->remove((B,?,1));    % remove B from DB
+        }
+        Nonce:=fresh();
+        SharedDB->add((Actor,Nonce,2));   % add entry to DB
+        Actor *->  B: Nonce;                % handover to B
+      }
+    }
+
+    entity Bob(A,Actor: agent, 
+                            SharedDB: agent*text*nat set) {
+
+      symbols
+        Nonce: text;
+      body {
+        A *-> Actor: ?;                   % handover from A
+        Nonce:=fresh();
+        SharedDB->add((Actor,Nonce,1));   % add entry to DB
+        Actor *->  A: Nonce;                % handover to A
+        A *-> Actor: ?;                   % handover from A
+        
+        assert test_sharedDB_B: 
+                       SharedDB->contains((Actor,Nonce,1));
+                      % should report violation because now
+               % A has removed B's entry from the shared DB
+      }
+    }
+
+    body {
+      SharedDB := {};
+      new Alice(A,B,SharedDB);
+      new Bob  (A,B,SharedDB);
+    }
+  }
+
+  body
+    any A B. Session(A,B) where A!=B & 
+                             !dishonest(A) & !dishonest(B);
+}

@@ -1,0 +1,32 @@
+specification Assert_Safe
+channel_model CCM
+
+entity Env
+{
+	symbols
+           alice, bob : agent;
+	   token1 : message;
+
+	entity Alice(Actor, B : agent) 
+	{
+		body {
+			Actor *->* B : token1;
+		}
+	}
+
+	entity Bob(Actor, A : agent)
+	{
+		symbols 
+			M : message;
+
+		body {
+			A *->* Actor : ?M;
+			assert right_message : M = token1;
+		}
+	}
+
+	body  {
+		new Alice(alice, bob);
+		new Bob(bob, alice);
+	}
+}

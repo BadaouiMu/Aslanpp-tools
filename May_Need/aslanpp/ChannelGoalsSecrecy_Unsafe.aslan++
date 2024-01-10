@@ -1,0 +1,33 @@
+% TESTED FEATURES: channels, channel secrecy goals
+% EXPECTED OUTCOME: Unsafe
+specification ChannelGoalsSecrecy_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    B: agent;
+    peer(agent): agent;
+    nonpublic tok : message;
+
+  entity Alice(Actor, B: agent) {
+    body {
+      Actor -> B : secr_a_b:(tok);
+    }
+  }
+
+  entity Bob(A, Actor: agent) {
+    body {
+      A -> Actor : secr_a_b:(tok);
+    }
+  }
+
+  body {
+    B := peer(a);
+    new Alice(a, B);
+    new Bob  (a, B);
+  }
+  goals
+    secr_a_b:(_) a ->* B; %# translator restriction here: does not allow "peer(a) instead of B"
+}

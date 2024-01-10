@@ -1,0 +1,16 @@
+% TESTED FEATURES: public functions
+% EXPECTED OUTCOME: Unsafe
+specification Public_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		a: agent;
+		my_op(message,message):message;
+        	% note that my_op is intended to be public!
+
+	goals
+		token2_not_revealed: [](!iknows(my_op(i,i)));
+		% note that this should fail because i should know my_op!
+}

@@ -1,0 +1,43 @@
+% @clatse(--nb 2)
+% TESTED FEATURES: channels, channel secrecy goals
+% EXPECTED OUTCOME: Safe
+specification ChannelGoalsSecrecy_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    nonpublic tok : message;
+    Tok : message;
+
+  entity Alice(Actor, B : agent) {
+    body {
+    %%Actor *->* B : tok;
+    %%channel_goal secr_a_b : Actor ->* B : tok; 
+      Actor *->* B : secr_a_b:(tok);
+      Actor *->* B : secr_a_b:(Tok); % CL-AtSe requires --nb 2
+    }
+  }
+
+  entity Bob(Actor, A : agent) {
+    symbols 
+      Tok: message;
+    body {
+    %%A *->* Actor : ?Tok;
+    %%channel_goal secr_a_b : A  ->* Actor : Tok;
+      A *->* Actor : secr_a_b:(tok);
+      iknows(tok); % at this point, *no* attack must be found. 
+      A *->* Actor : secr_a_b:(?Tok);
+      iknows(Tok); % at this point, *no* attack must be found. 
+    }
+  }
+
+  body {
+    Tok := tok;
+    new Alice(a, b);
+    new Bob(b, a);
+  }
+  goals
+    secr_a_b:(_) a ->* b;
+}

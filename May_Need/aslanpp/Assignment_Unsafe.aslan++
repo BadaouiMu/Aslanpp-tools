@@ -1,0 +1,21 @@
+specification Person
+channel_model CCM
+
+entity Person
+{
+	symbols
+		Age : message ;
+		child, adult, old : message ;
+		dead : fact;
+
+	body 
+	{
+		Age := child;
+		Age := adult;
+		Age := old;
+		dead;
+	}
+
+	goals 
+	      immortal : [](!dead);
+}

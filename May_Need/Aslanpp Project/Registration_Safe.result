@@ -1,0 +1,40 @@
+INPUT:
+	aslan/Registration_Safe.aslan
+
+SUMMARY:
+	NO_ATTACK_FOUND
+
+DETAILS:
+	TYPED_MODEL
+
+BACKEND:
+	CL-ATSE 2.5-26_(2014-octobre-23)
+
+STATISTICS:
+	TIME 2139492 ms
+	TESTED 46589 transitions
+	REACHED 19546 states
+	READING 22.72 seconds
+	ANALYSE 2116.77 seconds
+
+UNUSED:
+	step_005_Alice__line_30
+	step_008_RA__line_51
+	step_011_GWN__line_83
+	step_018_E_A_Alice__line_143
+	step_020_E_A_Alice__line_142
+	step_021_E_A_Alice__line_156
+	step_022_E_A_Alice__line_156
+	step_023_Gateway__line_179
+	step_024_Gateway__line_180
+	step_025_Gateway__line_181
+	step_026_Gateway__line_187
+	step_027_Gateway__line_188
+	step_028_Gateway__line_191
+	step_029_Gateway__line_191
+	step_030_Gateway__line_188
+	step_031_Gateway__line_181
+	step_032_Gateway__line_205
+	step_033_Gateway__line_206
+	step_034_Gateway__line_206
+	step_037_E_A_Bob__line_228

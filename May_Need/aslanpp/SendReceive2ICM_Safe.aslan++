@@ -1,0 +1,34 @@
+specification SendReceive2ICM_Safe
+channel_model ICM
+
+entity Environment
+{
+symbols 
+   	a, b: agent;
+
+	entity Alice(Actor , B : agent) {
+	symbols
+		nonpublic secret: message;
+	body {
+		Actor *->* B: secret;
+		}
+	}
+
+
+	entity Bob(Actor , A: agent) {
+	symbols
+		M1,M2 : message;
+	        P: public_key;
+	body {
+		A *->* Actor : ?M1;  % severe translator bugs. Works for CCM and ACM.
+		M2 := fresh();
+		[Actor]_[P] -> i: M2;
+		secrecy_goal protected_secret: A,Actor: M1; 
+		}
+	}
+
+body{
+	new Alice(a,b);
+	new Bob(b,a);
+	}
+}

@@ -1,0 +1,25 @@
+% TESTED FEATURES: LTL goals, breakpoints 
+% EXPECTED OUTCOME: Unsafe
+specification LTLInvariant_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		tick0, tick1, tick2, tick3 : fact;
+		Var: nat;
+		one, two: nat;
+
+	breakpoints { prop, tick0, tick1, tick2, tick3 }
+        body {
+		tick0;
+		Var := one;
+		tick1;
+		Var := two; % property should break here
+		tick2;
+		tick3;
+	}
+
+	goals
+		inv : [](!tick1 | Var=one | tick3);
+}

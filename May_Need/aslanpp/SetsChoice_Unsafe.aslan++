@@ -1,0 +1,52 @@
+% TESTED FEATURES: nondeterministic choice from a set sent by reference
+% EXPECTED OUTCOME: Unsafe
+specification SetsChoice_Unafe
+channel_model CCM
+
+entity Environment
+{
+  types
+    choice < message;
+  symbols 
+    a, b : agent;
+    choice1: choice;
+    choice2: choice;
+    noninvertible %% needed for CL-AtSe
+    choice_request  (choice set): message; 
+    choice_response (choice    ): message;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      Choices: choice set;
+      Choice : choice;
+    body {
+      % Alice lets Bob choose an element of Choices
+      Choices := {choice1,choice2};
+      Actor *-> B: choice_request(Choices);
+      select {
+        on(B *->* Actor: choice_response(  ?Choice) & 
+                         Choices->contains(?Choice)): {
+          assert choice_is_valid: Choices->contains(Choice);
+          % checks for authentic transmission of the choice
+        }
+      }
+      assert finished: false;
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      Choices: choice set;
+      Choice : choice;
+    body {
+      A *-> Actor : choice_request(?Choices); %% the set is passed as a reference!
+      if(Choices->contains(?Choice)) %% nondeterministically take any element of Choices
+        Actor *->* A: choice_response(Choice);
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+}

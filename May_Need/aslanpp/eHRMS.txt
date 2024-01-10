@@ -1,0 +1,288 @@
+%Like-Prolog setting for eHRMS: scenes 1-4
+% Michele Barletta (UNIVR),
+% Silvio Ranise (FBK),
+% Jorge Cuellar (Siemens)
+% June 17, 2010
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Policy rules %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% There are three doctors, named d(1), d(2), and d(3).
+is_doctor(d(1)).
+is_doctor(d(2)).
+is_doctor(d(3)).
+
+% There are two clinics, named c(1) and c(2).
+is_clinic(c(1)).
+is_clinic(c(2)).
+
+% There are two heads (of clinics), named h(1) and h(2).
+is_head(h(1)).
+is_head(h(2)).
+
+% There are several nurses located in various parts of the clinics
+is_nurse(nr(1)). %nurse of rightward of clinic 1
+is_nurse(nl(1)). %nurse of leftward of clinic 1
+is_nurse(nr(2)). %nurse of rightward of clinic 2
+is_nurse(nl(2)). %nurse of lefttward of clinic 2
+is_nurse(m(1)). %nurse of rightward of clinic 1
+is_nurse(ml(1)). %nurse of leftward of clinic 1
+
+% There are several patients located in various parts of the clinics
+is_patient(p).
+is_patient(pd(1)).
+is_patient(pd(2)).
+is_patient(pd(3)).
+is_patient(pc(1)).
+is_patient(pc(2)).
+is_patient(vd(2)).
+is_patient(vc(1)).
+
+%  wards of clinics
+is_ward(lw(X),c(X)):- is_clinic(c(X)).
+is_ward(rw(X),c(X)) :- is_clinic(c(X)).
+
+% Associating persons with positions or locations vua assign_* relations
+
+% Some associations are static...
+
+% Assigning doctors to clinic (Table 14)
+assign_doctor2clinic(d(1),c(1)).
+assign_doctor2clinic(d(2),c(2)).
+assign_doctor2clinic(d(3),c(1)).
+assign_doctor2clinic(d(3),c(2)).
+assign_doctor2clinic(e(1),c(1)).
+assign_doctor2clinic(e(2),c(2)).
+
+% Assigning nurses to clinics (Table 15).
+assign_nurse2clinic(nr(1),rw(1)).
+assign_nurse2clinic(nl(1),lw(1)).
+assign_nurse2clinic(nr(2),rw(2)).
+assign_nurse2clinic(nl(2),lw(2)).
+assign_nurse2clinic(n(1),lw(1)).
+assign_nurse2clinic(n(1),rw(1)).
+assign_nurse2clinic(ml(1),lw(1)).
+
+% Assigning heads to clinics (Table 16)
+assign_head2clinic(h(1),c(1)).
+assign_head2clinic(h(2),c(2)).
+
+% Some associations are dynamic (depending on the state of
+% the transition system)...
+% ... :- dynamic says(_,info_assign_patient2doctor/2).
+
+% Assigning patients to doctors (Table 17)
+
+% :- assert(says(_,info_assign_patient2doctor(pd(1),d(1)))).
+% :- assert(says(_,info_assign_patient2doctor(pd(2),d(2)))).
+% :- assert(says(_,info_assign_patient2doctor(pd(3),d(3)))).
+
+assign_patient2doctor(P,D) :-
+  says(_,info_assign_patient2doctor(P,D)),
+  is_doctor(D),
+  is_patient(P).
+
+% ... :- dynamic says(_,info_assign_VIPpatient2doctor/2).
+
+% Assigning VIP patients to doctors (Table 17).
+
+% :- assert(says(_,info_assign_VIPpatient2doctor(vd(2),d(2)))).
+
+% assign_VIPpatient2doctor(P,D) :-
+%   says(_,info_assign_VIPpatient2doctor(P),D),
+%   is_doctor(D),
+%   is_VIP(P).
+
+:- dynamic says(_,info_assign_patient2clinic/2).
+
+% Assigning patients to clinics (Table 17).
+
+% :- assert(says(_,info_assign_patient2clinic(pc(1),c(1)))).
+% :- assert(says(_,info_assign_patient2clinic(pc(2),c(2)))).
+
+assign_patient2clinic(P,C) :-
+  says(_,info_assign_patient2clinic(P,C)),
+  is_clinic(C),
+  is_patient(P).
+
+:- dynamic says(_,info_assign_VIPpatient2clinic/2).
+
+% Assigning VIP patients to clinics (Table 17).
+
+% :- assert(says(_,info_assign_VIPpatient2clinic(vc(1),c(1)))).
+
+assign_VIPpatient2clinic(P,C) :-
+  says(_,info_assign_VIPpatient2clinic(P,C)),
+  is_clinic(C),
+  is_VIP(P).
+
+:- dynamic says(_,info_assign_nurse2patient/2).
+
+%Assigning nurses to patients
+assign_nurse2patient(N,P) :-
+  says(_,info_assign_nurse2patient(N,P)),
+  is_nurse(N),
+  is_patient(P).
+
+assign_nurse2patient(N,P) :-
+  says(_,info_assign_nurse2patient(N,P)),
+  is_nurse(N),
+  has_vip_clearance(N),
+  is_VIP(P).
+
+% Recognizing VIP patients.
+is_VIP(P) :-
+  is_patient(P),
+  has_vip_status(P).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% eHealth Records (eHR): structure of a record
+% eHR(eHR_type, P, key, record)
+
+:- dynamic eHR/5.
+
+%%% SR: added an extra argument to say if the patient has vip status
+%%% or not... Otherwise, it is difficult to define the predicate
+%%% has_vip_status (see below) used to recognize vip patients...
+eHR(Type_eHR, P, Key, Record, VIP) :-
+  says(_,info_eHR(eHR_type, P, Key, Record),)
+  is_patient(P),
+  is_key(Key),
+  is_record(Record).
+
+%%% Fake recognizers for keys and records... just put here for
+%%% uniformity of spec...
+is_key(_).
+is_record(_).
+
+has_vip_status(P) :-
+  eHR(demographic, P, _, _, vip_status),
+  is_patient(P).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Doctors can access all eHR of patients associated to them
+can_access(D,P,eHR(_,P,_)) :-
+  is_doctor(D),
+  is_patient(P),
+  assign_patient2doctor(P,D).
+
+% Nurses can access
+% - normal eHRs of patients associated with them
+can_access(N,P,eHR(normal,P,_)) :-
+  is_nurse(N),
+  is_patient(P),
+  assign_patient2nurse(P,N).
+% - PS eHRs of her patients, only if she has PS-clearance
+can_access(N,P,eHR(psycho,P,_)) :-
+  is_nurse(N),
+  is_patient(P),
+  assign_patient2nurse(P,N),
+  has_ps_clearance(N).
+% - all emergency eHRs of her patients
+can_access(N,P,eHR(emergency,P,_)) :-
+  is_nurse(N),
+  is_patient(P),
+  assign_patient2nurse(P,N).
+
+% A Treating doctor can copy and send of the eHR of a patient if this
+% gives his/her consent
+can_copy_and_send(TD,P,eHR(Type,P,Content)) :-
+  is_doctor(TD),
+  is_patient(P),
+  assign_patient2treatingdoctor(P,TD),
+  patient_consent(eHR(Type,P,Content)).
+
+:- dynamic has_vip_clearance/1.
+
+% A treating doctor can assign any doctor of the clinic and any nurse
+% to the patient
+can_assign_patient2carepersonnel(TD,P,D) :-
+  is_doctor(TD),
+  is_patient(P),
+  is_doctor(D),
+  assign_patient2treatingdoctor(P,TD).
+can_assign_patient2carepersonnel(TD,P,N) :-
+  is_doctor(TD),
+  is_patient(P),
+  is_nurse(N),
+  \+ has_vip_clearance(N), % required a form of negation?
+  assign_patient2treatingdoctor(P,TD).
+can_assign_patient2carepersonnel(TD,P,N) :-
+  is_doctor(TD),
+  is_vip(P),
+  is_nurse(N),
+  has_vip_clearance(N),
+  assign_patient2treatingdoctor(P,TD).
+
+% The head of the clinic may give nurse VIP-clearance and PS-clearance
+can_assign_vip_clearance(H,N) :-
+  is_head(H),
+  is_nurse(N),
+  assign_head2clinic(H,C),
+  assign_nurse2clinic(N,C).
+can_assign_ps_clearance(H,N) :-
+  is_head(H),
+  is_nurse(N),
+  assign_head2clinic(H,C),
+  assign_nurse2clinic(N,C).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Transition rules %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Action : create_eHR
+% Automatic generation of a record when a patient is associated to a doctor
+is_key(Key), is_record(Record),
+assign_patient2doctor(P,D),
+ =>
+says(_,info_eHR(demographic, P, Key, Record)) %%% SR: should we put here demographic?
+
+% action assign_patient2doctor:
+is_patient(P), is_doctor(D)
+% SR: ???? where is it defined???? can_assign(p(X),d(Y))
+ =>
+says(_,info_assign_patient2doctor(P,D))
+
+% action assign_VIPpatient2doctor:
+is_vip(P), is_doctor(D),
+% SR: ???? where is it defined???? can_assign(p(X),d(Y)),
+ =>
+says(_,info_assign_VIPpatient2doctor(P,D))
+
+% action assign_patient2clinic:
+% SR: ???? where is it defined???? can_assign(p(X),c(Y))
+%%% SR: should we add "assign_head2clinic(H,C)" to identify the
+%%% administrator who is supposed to perform the action as above,
+%%% implicitly, we have identified the doctor as the administrator
+%%% performing the action?
+is_patient(P), is_clinic(C)
+ =>
+says(_,info_assign_patient2clinic(P,C))
+
+% action assign_nurse2patient:
+% SR: ???? where is it defined????  can_assign(n(X),p(Y))
+is_nurse(N), is_patient(P),
+assign_patient2doctor(P,D)
+ =>
+says(_,info_assign_nurse2patient(N,P))
+
+%%% SR: I belive this is not neede here... we can handle this at the
+%%% policy level... see the rules above assign_nurse2patient above...
+% action assign_VIPpatient2clinic:
+% SR: ???? where is it defined????  can_assign(p(X),c(Y)),
+% is_VIP(p(X))
+%  =>
+% says(_,info_assign_VIPpatient2clinic(p(X),c(Y)))
+
+%%% SR: IS THIS REALLY NEEDED? I believe we can have this static (see above)
+% action assign_head2clinic:
+% can_assign(h(X),c(X)) => says(_,info_assign_head2clinic(h(X),c(X)))
+
+%%% SR: IS THIS REALLY NEEDED? I believe we can have this static (see above)
+% action assign_physician2clinic:
+% can_assign(e(X), c(X)) => says(_,info_assign_physician2clinic(e(X),c(X))).

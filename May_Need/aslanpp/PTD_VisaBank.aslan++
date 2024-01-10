@@ -1,0 +1,455 @@
+% Process Task Delegation (PTD) in a workflow
+% Scene "Coupling the Visa Portal with a Bank"
+% An Applicant applies to the VisaP for a visa. For the visa some documents 
+% are needed e.g. a financial statement of his bank proving his solvency etc.
+% The present scenario is an application of the generic PTD scenario where 
+% the Client C is a Applicant,
+% the Application 1 is a VisaP,
+% the Application 2 is a Bank (determined by the Applicant), 
+% the TSVisaP is the Trust Server of the VisaP, and 
+% the TSBank  is the Trust Server of the Bank.
+
+% The Client (=Applicant) talks over a server-side authenticated channel and presents
+% his credential over it (usually that means: username/password over HTTPS).
+% For simplicity, we model this authentication step via a digital signature.
+
+% Due to the fact that the Applicant determines by his own the Application 2 (=Bank)
+% we abandon in this case the common way where the Application 1 offers the Client some 
+% "choices", and we let the Applicant make his own choice of the Bank. Just for the
+% quite unlikely case that the VisaP should determine the Bank we modeled for the
+% VisaP an option (=Bank0).
+
+% For securing the communication between VisaP and Bank, which is routed via the Applicant,
+% the Applications cannot rely on the hop-by-hop transport security
+% because the Applicant cannot be trusted. Therefore encryption and MACs using
+% a symmetric key are used to ensure end-to-end security between VisaP and Bank.
+
+% The Applicant can see the TaskHandle in order to check the name of the Bank,
+% but for SSO scenarios the intruder should not be able to see the TaskHandle.
+% Therefore, we use confidential channels between VisaP and Applicant,
+% and between Applicant and Bank.
+
+
+specification VisaBank channel_model CCM
+
+entity Environment {
+
+  types
+    option < message;
+
+  symbols %% generic stuff and agent names
+    noninvertible mac (symmetric_key, message): message;
+    noninvertible genuine_ts (agent): fact;
+    c1, c2, a1, a2, ts1, ts2: agent;
+    bank_from_applicant: option;
+    bank_from_visap: option;
+
+  entity Session (Applicant, VisaP, TSVisaP, Bank, TSBank: agent, Option: option) {
+
+    types
+      details  < message;
+      metadata < message;
+      result   < message;
+      authorization < message;
+      order    < message;
+
+    macros
+      signed                (M,A) = sign(inv(pk(A)),M); %% general signing
+      authenticated_message (M,A) = sign(inv(pk(A)),M); %% simulates username/password
+
+    %% the messages names/tags
+    symbols
+      workflow_request   (message): message;
+      session_request    (message): message;
+      session_response   (message): message;
+      task_invocation    (message): message;
+      token_request      (message): message;
+      fwd_token_request  (message): message;
+      fwd_token_response (message): message;
+      token_response     (message): message;
+      task_result        (message): message;
+      workflow_response  (message): message; %% needed to tag the result
+      %% to avoid spurious replay attacks/confusion with task_invocation
+      noninvertible client_part (result): result;
+      make_order(text,details,agent): order;
+      make_ADT  (text,message,agent): authorization;
+
+      nr_witness(agent,message): fact;
+      nr_evidence(message): message;
+
+    entity Applicant (Actor, VisaP, Bank: agent) { % is not trusted!
+
+      symbols
+        Details: details;
+        Meta   : metadata;
+        TI, U  : message;
+        MAC    : mac (symmetric_key, message);
+        Result : result;
+
+      body {
+        Details := fresh();  % the application contents part of the request
+        Meta    := fresh();  % the identification (AAA) part of the request
+
+        Actor ->* VisaP: authenticated_message(workflow_request(
+                         Details.Meta.Bank.Actor),Actor);          %%Transmission 1S
+        channel_goal auth_Applicant_VisaP: Actor *-> VisaP: Details.Bank;
+        % checks if the request of the Applicant is authentic
+        % S4: Explicit Client Authentication
+        % By determining the Bank, the Applicant gives an implicit declaration 
+        % of consent for the documents the Bank will deliver to the VisaP.
+        % S11: User Consent (implicit in Bank value)
+        
+        % Applicant forwards the task invocation from VisaP to Bank
+        select {
+          on (VisaP *->* Actor: task_invocation(?TI.?MAC) &         %%Transmission 4R
+              ?TI=VisaP.(?.VisaP.?Bank.?).?): {}
+        }
+        % Applicant may get an update on the identity of Bank at this point
+        secrecy_goal secret_Details: Actor, VisaP, Bank: Details;
+        %% goal deferred to this position because of A2 (=Bank)
+        % checks if the Details of the Applicant's request are shared only with the applications
+        % S1: Data Confidentiality
+
+        Actor ->* Bank: task_invocation(TI.MAC);                    %%Transmission 5S
+        channel_goal auth_Applicant_Bank: Actor *-> Bank: Details;
+        % checks if the Details originate from the correct Applicant identified by the VisaP
+        % S7: Client Identity and Authentication Federation
+
+        % Applicant forwards the task result from Bank to VisaP
+        Bank *-> Actor: task_result(?U);                           %%Transmission 10R
+        %we do not need authentic channel here:
+        Actor ->* VisaP: task_result(U);                           %%Transmission 11S
+        VisaP *->* Actor: workflow_response(?Result);              %%Transmission 12R
+        channel_goal secure_VisaP_Result_Applicant: VisaP *->* Actor: Result;
+        % checks if the Results of the Bank are shared by the VisaP only with the Applicant
+        % and    if the Results of the Bank are authentically transmitted from the VisaP
+        % S1: Data Confidentiality
+        
+        channel_goal auth_Bank_Applicant: Bank *-> Actor: Result;
+        % checks if the Results of the Bank are authentic 
+        % S2: Data Authenticity for the Client
+
+        % Applicant happily has got the final response on his request :-)
+        %assert client_is_finished: false;  %%% just for executability testing!
+      }
+    }
+
+
+    % Application 1
+    entity VisaP (Actor, Bank, TSVisaP, TSBank: agent, Option: option) { 
+             %% added TSBank just for secrecy goals
+
+      symbols
+        Applicant,
+        Bank0  : agent;
+        Details: details;
+        Meta   : metadata;
+        ADT    : authorization; % Authorization Decision Token for Bank's task
+        ADT0   : text;
+        SeqNr  : nat;
+        SKey   : symmetric_key;
+        TaskHandle: message; % aka SAML artefact, used to identify Bank's task
+        Order  : order;
+        Order0 : text;
+        TI, R  : message;
+        Result : result;
+
+      body {
+        ?Applicant ->* Actor: authenticated_message(workflow_request(?Details.?Meta.
+                             ?Bank0.?Applicant),?Applicant);       %%Transmission 1R
+        channel_goal auth_Applicant_VisaP: Applicant *-> Actor: Details.Bank0;
+        % checks if the request of the Applicant is authentic
+        % S4: Explicit Client Authentication
+        % By determining the Bank the Applicant gives an implicit declaration 
+        % of consent for the documents the Bank will deliver to the VisaP.
+        % S11: User Consent (implicit in Bank value)
+
+       if(Option = bank_from_applicant)    % in this case,learn Bank from Applicant, 
+                                           % otherwise use own value
+          Bank := Bank0;
+        secrecy_goal secret_Details: Applicant, Actor, Bank: Details;
+        %% goal deferred to this position because of A2 (=Bank)
+        % checks if the Details of the Applicant's request are shared only with the applications
+        % S1: Data Confidentiality
+        
+        % VisaP is going to forward the request to Bank and contacts its 
+        % Trust Server TSVisaP
+        % VisaP pre-computes the ADT, which could also be done by TSVisaP, 
+        % based on Meta and Applicant
+        ADT0 := fresh();
+        ADT  := make_ADT(ADT0,Meta,Applicant);
+        secrecy_goal secret_ADT: Actor, TSVisaP, Bank, TSBank: ADT;
+        % checks if the ADT remains secret among the applications and their trust servers
+        % Secondary goal necessary for S6: Authorization Management
+
+        % VisaP obtains from its TS the session credentials for the communication with Bank.
+        Actor *->* TSVisaP: session_request (ADT.Bank);            %%Transmission 2S
+        select {
+          on(TSVisaP *->* Actor: session_response (?TaskHandle.?SKey) %%Transmission 3R
+             & ?TaskHandle = TSVisaP.Actor.Bank.?SeqNr): {}
+        }
+        secrecy_goal secret_SKey: Actor, TSVisaP, Bank, TSBank: SKey;
+        % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+        % checks if the SKey remains secret among the applications and their trust servers
+        % and in particular the Applicant cannot use the SKey (and manipulate the Order)
+        
+        % VisaP creates the task invocation for Bank including session information 
+        % and the application data
+        % which is integrity and confidentiality protected using the session key (SKey)
+        Order0 := fresh();
+        Order  := make_order(Order0,Details,Applicant); %% any term depending on Details and Applicant
+        TI     := Actor.TaskHandle.scrypt(SKey,Order);
+
+        Actor *->* Applicant: task_invocation (TI.mac(SKey, TI));  %%Transmission 4S
+        channel_goal secure_VisaP_Order_Bank: Actor *->* Bank: Order;
+        % checks if the Order obtained by Bank belongs to the corresponding session (identified by SKey)
+        % and    if the Order is authentic and sent by VisaP on behalf of the Applicant
+        % and    if the Order is shared only among VisaP and Bank
+        % S8: Secure Workflow Binding for Application 2
+        % S9: Application and Authorization Data Authenticity
+        % S10: Authorization Policy
+
+        % VisaP receives (typically via Applicant) the response of Bank, 
+        % which is the task result 
+        select {
+          on(? ->* Actor: task_result(?R)                          %%Transmission 11R
+             & ?R = signed(Bank.Actor.scrypt(SKey,?Result),Bank)):
+            channel_goal secure_Bank_Result_VisaP: Bank *->* Actor: SKey.Result;
+            % checks if the results (encrypted with the SKey) sent by the Bank and obtained by the VisaP
+            %           are authentic and shared only among these and the Bank is identifiable  by the VisaP
+            % and    if they belong to the correct session with the given Applicant
+            % and if the Bank is authorized to issue such results
+            % S3: Data Authenticity for Application 1
+            % S5: Secure Workflow Binding for Application 1
+            % S11: User Consent
+            % S12: Trusted Providers 
+          {}
+        }
+
+        % VisaP forwards to Applicant the part of the result relevant for Applicant
+        %% Note that our channel goal for client_part(Result) does not include the Bank
+        %% as potentially knowing party. Thus our goal is stronger than needed.
+        Actor *->* Applicant: workflow_response(client_part(Result)); %%Transmission 12S
+        channel_goal secure_VisaP_Result_Applicant: Actor *->* Applicant: client_part(Result);
+        % checks if the Results of the Bank are shared by the VisaP only with the Applicant
+        % and    if the Results of the Bank are authentically transmitted from the VisaP
+        % S1: Data Confidentiality
+      }
+    }
+
+    % Trust Server 1
+    entity TSVisaP (VisaP, Actor, TSBank: agent) {
+                %% TSBank is already given as a parameter just for secrecy goals
+
+      symbols
+        Bank      : agent;
+        ADT       : authorization;
+        SeqNr     : nat;
+        SKey      : symmetric_key;
+        TaskHandle: message;
+
+      body {
+        ?VisaP *->* Actor: session_request (?ADT.?Bank);           %%Transmission 2R
+        secrecy_goal secret_ADT: VisaP, Actor, Bank, TSBank: ADT;
+        % checks if the ADT remains secret among the applications and their trust servers
+        % Secondary goal necessary for S6: Authorization Management
+        
+        % TSVisaP generates a session pointer (TaskHandle) 
+        % and a symmetric session key (SKey)
+        SeqNr := fresh(); % may be guessable in certain applications
+        SKey  := fresh(); % used to secure the VisaP-Bank connection 
+                              % and to identify the session with the Bank
+        TaskHandle := Actor.VisaP.Bank.SeqNr; % may need to be secret 
+                                                % in certain applications
+        secrecy_goal secret_SKey: VisaP, Actor, Bank, TSBank: SKey;
+        % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+        % checks if the SKey remains secret among the applications and their trust servers
+        % and in particular the Applicant cannot use the SKey (and manipulate the Order)
+        
+        Actor *->* VisaP: session_response (TaskHandle.SKey);      %%Transmission 3S
+
+        % TSVisaP processes a request to provide the token (ADT) and SKey,
+        % actually learning the identity of TSBank at this point
+        select {
+          on(?TSBank *->* Actor: fwd_token_request (TaskHandle)    %%Transmission 7R
+            & genuine_ts(?TSBank)): % note that the name of TSBank is not in the TaskHandle!
+          {
+            %% ADT could be weakened by TSVisaP before forwarding it to TSBank
+            Actor *->* TSBank: fwd_token_response (TaskHandle.ADT.SKey); %%Transmission 8S
+          }
+        }
+      }
+    }
+
+    % Application 2
+    entity Bank (Actor, TSVisaP, TSBank: agent) { %% added TSVisaP just for secrecy goals
+
+      symbols
+        Applicant,
+        VisaP  : agent;
+        MAC    : mac (symmetric_key, message);
+        TaskHandle: message;
+        CryptedOrder: scrypt (symmetric_key, order);
+        Order  : order;
+        Order0 : text;
+        Details: details;
+        ADT    : authorization;
+        SKey   : symmetric_key;
+        TI,R   : message;
+        Result : result;
+
+      body {                                                       %%Transmission 5R
+        select {
+          on(? ->* Actor: task_invocation (?TI.?MAC) 
+             & ?MAC = mac(?,?) %%% helps SATMC?##
+             & ?TI = ?VisaP.?TaskHandle.?CryptedOrder): {} 
+        }
+        %% Bank does not rely on the sender's identity, therefore using plain "?"
+        %  Bank does not need to check here that its name is in TaskHandle!
+        
+        % Bank obtains from its token server (TSBank, or maybe TSVisaP) 
+        % the token and SKey
+        Actor *->* TSBank: token_request (TaskHandle);             %%Transmission 6S
+        select {
+          on(TSBank *->* Actor: token_response (TaskHandle.?ADT.?SKey)    
+                                                                   %%Transmission 9R
+             % Bank decrypts TSBank's response
+             % and checks if the decrypted data corresponds to the mac-ed data
+             &  CryptedOrder = scrypt(?SKey,?Order)                      % decrypts the Order
+%%% workaround for OFMC start
+%%%          &        ?Order = make_order(?Order0,?Details,?Applicant)   % decomposes the Order
+%%%          &  MAC = mac(?SKey, VisaP.TaskHandle.scrypt(?SKey, ?Order)) % checks the MAC
+%%%          &  TaskHandle = TSVisaP.VisaP.?.?  % no need to check TSVisaP and VisaP here?!?
+            ): {} 
+        }
+        select {
+          on(TSBank *->* Actor: token_response (TaskHandle.ADT.SKey)    
+             &         Order = make_order(?Order0,?Details,?Applicant)   % decomposes the Order
+             &  MAC = mac( SKey, VisaP.TaskHandle.scrypt( SKey,  Order)) % checks the MAC
+             &  TaskHandle = TSVisaP.VisaP.?.?  % no need to check TSVisaP and VisaP here?!?
+%%% workaround for bug in OFMC end
+            ):
+            channel_goal auth_Applicant_Bank: Applicant *-> Actor: Details;
+            %%% would otherwise go wrong for OFMC
+            % checks if the Details originate from the correct Applicant identified by the VisaP
+            % S7: Client Identity and Authentication Federation
+            
+            channel_goal secure_VisaP_Order_Bank: VisaP *->* Actor: Order;
+            %%% would otherwise go wrong for OFMC
+            % checks if the Order obtained by Bank belongs to the corresponding session 
+            % (identified by SKey)
+            % and    if the Order is authentic and sent by VisaP on behalf of the Applicant
+            % and    if the Order is shared only among VisaP and Bank
+            % S8: Secure Workflow Binding for Application 2
+            % S9: Application and Authorization Data Authenticity
+            % S10: Authorization Policy
+          {
+            assert test_MAC_instantiation_CL_AtSe_bug: MAC=mac(SKey, TI); 
+            %## goes wrong in CL_AtSe untyped analysis only
+            secrecy_goal secret_ADT: VisaP, TSVisaP, Actor, TSBank: ADT; 
+            % gets violated if TSVisaP is not genuine !!
+            % checks if the ADT remains secret among the applications and their trust servers
+            % Secondary goal necessary for S6: Authorization Management
+            
+            secrecy_goal secret_SKey: VisaP, TSVisaP, Actor, TSBank: SKey;
+            % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+            % checks if the SKey remains secret among the applications and their trust servers
+            % and in particular the Applicant cannot use the SKey (and manipulate the Order)
+           
+            secrecy_goal secret_Details: Applicant, VisaP, Actor: Details;
+            % checks if the Details of the Applicant's request are shared only with the applications
+            % S1: Data Confidentiality
+
+            % Bank performs the task requested by VisaP and sends the result to VisaP, 
+            % typically via Applicant
+            Result := fresh();    %% should be depending on the Order etc.
+            R      := Actor.VisaP.scrypt(SKey,Result);
+            Actor *-> Applicant: task_result(signed (R,Actor));    %%Transmission 10S
+            channel_goal auth_Bank_Applicant: Actor *-> Applicant: client_part(Result);
+            % checks if the Results of the Bank for the Applicant are authentic 
+            % S2: Data Authenticity for the Client
+    
+            channel_goal secure_Bank_Result_VisaP: Actor *->* VisaP: SKey.Result;
+            % checks if the results (encrypted with the SKey) sent by the Bank and obtained by the VisaP
+            %           are authentic and shared only among these and the Bank is identifiable  by the VisaP
+            % and    if they belong to the correct session with the given Applicant
+            % and    if the Bank is authorized to issue such results
+            % S3: Data Authenticity for Application 1
+            % S5: Secure Workflow Binding for Application 1
+            % S12: Trusted Providers 
+
+            % for S13: Non-repudiation:
+            nr_witness(Actor,R);
+            Actor -> i: signed(nr_evidence(R),Actor);
+          }
+        }
+      }
+    }
+
+    % Trust Server 2
+    entity TSBank (Bank, Actor, VisaP: agent) { %% added VisaP just for secrecy goals
+
+      symbols
+        TSVisaP   : agent;
+        SeqNr     : nat;
+        TaskHandle: message;
+        ADT       : authorization;
+        SKey      : symmetric_key;
+
+      body {
+        % TSBank receives from Bank a request for the 
+        % session credentials generated by TSVisaP
+        select {
+          on(Bank *->* Actor: token_request (?TaskHandle)          %%Transmission 6R
+             & ?TaskHandle = ?TSVisaP.VisaP.Bank.?SeqNr
+             & genuine_ts(?TSVisaP)): {
+
+            % TSBank in turn obtains the requested info from TSVisaP
+            Actor *->* TSVisaP: fwd_token_request (TaskHandle);    %%Transmission 7S
+            TSVisaP *->* Actor: fwd_token_response (TaskHandle.?ADT.?SKey); 
+                                                                   %%Transmission 8R
+            secrecy_goal secret_ADT: VisaP, TSVisaP, Bank, Actor: ADT;
+            % Secondary goal necessary for S6: Authorization Management
+            % The achievement of this goal ensures that the ADT remain within 
+            % the domains (= applications and their corresponding trusted servers).    
+            secrecy_goal secret_SKey: VisaP, TSVisaP, Bank, Actor: SKey;
+            % Secondary goal necessary for S1: Data Confidentiality and S5+S8: Secure Workflow Binding
+            % checks if the SKey remains secret among the applications and their trust servers
+            % and in particular the Applicant cannot use the SKey (and manipulate the Order)
+            
+            % TSBank returns the requested info to Bank
+            %% ADT could be weakened by TSBank before forwarding it to Bank
+            Actor *->* Bank: token_response(TaskHandle.ADT.SKey);  %%Transmission 9S
+          }
+        }
+      }
+    }
+
+    body { %% of entity Session
+      new Applicant(Applicant, VisaP, Bank);
+      new   VisaP  (           VisaP, Bank,  TSVisaP, TSBank, Option);
+      new TSVisaP  (           VisaP,        TSVisaP, TSBank);
+      new   Bank   (                  Bank,  TSVisaP, TSBank);
+      new TSBank   (                  Bank,           TSBank, VisaP);
+    }
+    goals
+      nonrepudiation_of_task_result_by_Bank:
+        forall A M. [] ((iknows(sign(inv(pk(A)),nr_evidence(M))) & !(dishonest(A))
+                         => nr_witness(A,M)));
+      % checks the correctness of the non-repudiation evidence of the Bank
+      % S13: Non_repudiation
+  }
+
+  body { %% of entity Environment
+     genuine_ts (ts1);
+     genuine_ts (ts2);
+     new Session(c1, a1, ts1, a2, ts2, bank_from_applicant);  
+% in this case, VisaP learns Bank from Applicant
+
+%    new Session( i, a1, ts1, a2, ts2, bank_from_applicant);  
+% here, i=Applicant tries manipulating the task_invocation
+
+%    new Session(c2, a1, ts1, a2, ts2, bank_from_visap );    
+% in this case, VisaP determines Bank
+  }
+}

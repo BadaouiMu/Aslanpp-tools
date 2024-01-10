@@ -1,0 +1,43 @@
+% TESTED FEATURES: symmetric crypt shorthand, equality test, channels
+% EXPECTED OUTCOME: Unsafe
+specification Scrypt_Unsafe
+channel_model CCM
+
+entity Env
+{
+    symbols
+        alice, bob : agent;
+        accepted(agent, agent, message) : fact;
+        token : message;
+	K : symmetric_key;
+ 
+    entity Alice(Actor, B : agent, Key : symmetric_key)
+    {
+	body {
+	    Actor -> B : {|token.Actor|}_Key;
+        }
+    }
+
+    entity Bob(Actor : agent, Key : symmetric_key)
+    {
+        symbols
+            M : message;
+	    Sender : agent;
+	    OtherKey : symmetric_key;
+
+        body {
+            ? -> Actor : {|?M.?Sender|}_?OtherKey;
+	    if (OtherKey = Key)
+               accepted(Actor, Sender, M);
+        }
+    }
+
+    body {
+	K := fresh();
+        new Alice(alice, bob, K);
+        new Bob(bob, K);
+    }
+
+    goals
+        g : [](!exists A1 A2 M . accepted(A1, A2, M));
+}

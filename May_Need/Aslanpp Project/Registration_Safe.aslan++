@@ -1,0 +1,302 @@
+    % 1/3 Code created by Mustapha Badaoui For : https://www.sciencedirect.com/science/article/abs/pii/S2542660520300019 
+
+    specification Registration_Safe % no attack found 
+    channel_model CCM
+
+    entity Environment {
+        symbols 
+            noninvertible xor_functionn (message, message): message;  
+            noninvertible hash_functionn (message): message; 
+            A, RA, GWN, B: agent;  % A: alice is the user (Ui) and B: bob is the smart device SDj
+
+        entity Registration(A, RA, GWN, B: agent) { 
+            entity Alice(Actor, RA, GWN, B: agent) {
+                symbols 
+                    nonpublic noninvertible select_id (agent): message; 
+                    nonpublic noninvertible choose_password (agent): message;
+                    nonpublic noninvertible exist_tid_DB(agent, message): fact; % return true if exist
+                    nonpublic noninvertible store_V1(agent, message): fact; 
+                    nonpublic noninvertible store_tid(agent, message): fact; 
+                    IDUi, PWi, TIDUi, TIDUitmp: message;
+                    Kur: symmetric_key;
+
+                body {
+                    IDUi := select_id(Actor); 
+                    secrecy_goal secret_ID: Actor, RA: IDUi;
+                    PWi := choose_password(Actor); 
+                    secrecy_goal secret_PW: Actor,RA: PWi;
+                    Actor  ->  RA: {|IDUi . PWi|}_Kur;
+                    RA  ->  Actor: {| ?TIDUi . hash_functionn(?IDUi . ?PWi)|}_Kur;
+                    if ( exist_tid_DB (Actor, TIDUi) ) { 
+                        store_V1(Actor, hash_functionn(IDUi . PWi));
+                    }
+                    else {
+                        store_tid(Actor, TIDUi);
+                    }
+                    secrecy_goal secret_TIDUi: Actor, RA, GWN, B: TIDUi;
+                    secrecy_goal secret_Kur: Actor, RA: Kur;
+                }
+            }
+            entity RA(A, Actor, GWN, B: agent) {
+                symbols 
+                    nonpublic noninvertible check_exsit_id_pw_DB(agent, message): fact; % return true if exist
+                    nonpublic noninvertible create_tid (agent, message, message): message; 
+                    nonpublic noninvertible search_tid_DB (agent, message): message; 
+                    V1, V2, V3: message;
+                    IDUi, PWi, TIDUi, GID: message; 
+                    Kur, Ksr, Kgr: symmetric_key; 
+
+                body {
+                    ?  ->  Actor: {|?IDUi.?PWi|}_Kur;
+                    if ( check_exsit_id_pw_DB(Actor, IDUi)) {  % in case user want to change password
+                        TIDUi := search_tid_DB (Actor, IDUi);
+                    }
+                    else { % first registration
+                        TIDUi := create_tid (Actor, IDUi, PWi);
+                    }
+                    secrecy_goal secret_TIDUi: A, Actor, GWN, B: TIDUi;
+                    V1 := hash_functionn( IDUi . PWi ); 
+                    V2 := hash_functionn (GID . xor_functionn(IDUi, PWi)); 
+                    V3 := hash_functionn(xor_functionn(GID, IDUi.PWi)) ; 
+                    Actor  ->  A: {| TIDUi . hash_functionn( IDUi . PWi ) |}_Kur;
+                    Actor -> GWN: {| TIDUi . V2 . V3 |}_Kgr ;   
+                    Actor -> B: {| V3 |}_Ksr ; 
+                    secrecy_goal secret_ID: Actor,A: IDUi;
+                    secrecy_goal secret_PW: Actor,A: PWi;
+                    secrecy_goal secret_Kur: Actor, A: Kur;
+                    secrecy_goal secret_Kgr: Actor, GWN: Kgr;
+                    secrecy_goal secret_Ksr: Actor, B: Ksr;
+
+                }
+            }
+            entity GWN(A, RA, Actor, B: agent) {
+                symbols
+                    nonpublic noninvertible tid_exist_DB (agent, message): fact; 
+                    nonpublic noninvertible update_tid (agent, message, message, message): fact; 
+                    nonpublic noninvertible store_tid_V2_V3(agent, message, message, message): fact;
+                    TIDUi, V2, V3: message; 
+                    Kgr: symmetric_key; 
+
+
+                body {
+                    ? -> Actor: {| ?TIDUi . ?V2 . ?V3 |}_Kgr ;
+                    if ( tid_exist_DB (Actor, TIDUi) ) {
+                        update_tid (Actor, TIDUi, V2, V3); 
+                    }
+                    else {
+                        store_tid_V2_V3(Actor, TIDUi, V2, V3); 
+                    }
+                    secrecy_goal secret_TIDUi: A, RA, Actor, B: TIDUi;
+                    secrecy_goal secret_Kgr: Actor, RA: Kgr;
+                }
+            }
+            entity Bob(RA, Actor: agent) {
+                symbols
+                    nonpublic noninvertible store_V3(agent, message): fact; 
+                    V3: message; 
+                    Ksr: symmetric_key; 
+
+
+                body {
+                    ?  ->  Actor: {| ?V3 |}_Ksr ; 
+                    store_V3(Actor, V3); 
+                    secrecy_goal secret_Ksr: Actor, RA: Ksr;
+                }
+            }
+            body { 
+                new Alice(A, RA, GWN, B);
+                new RA(A, RA, GWN, B);
+                new GWN(A, RA, GWN, B); 
+                new Bob(RA, B); 
+            }
+        }
+
+        entity Authentification(A, GWN, B: agent) {
+
+            entity Alice(Actor, GWN, B: agent) {
+	        	symbols 
+                    N1, Lc, Xn, Xp: message; % Xp = Xn-1
+                    DIDui, TIDUi, SIDj, GID: message; 
+                    UG, HUG, V2, M, HM: message; 
+                    N2, N3, N5, X5, R, RHMAC, Sk: message; 
+                    generate_localion (agent): message;
+                    is_it_GID_SIDj(message): fact; 
+                    nonpublic x5_in_DB(agent, message): message;  % or NaN if doesn't exist 
+                    nonpublic recupere_N2(agent, message): message;
+                    nonpublic recupere_N3(agent, message): message;
+                    nonpublic store_Sk(agent, message): fact;
+
+                body {
+                    N1 := fresh();  
+                    secrecy_goal secret_N1: Actor, GWN, B: N1;
+                    Lc := generate_localion(Actor);
+                    secrecy_goal secret_Lc: Actor, GWN : Lc; 
+                    Xn := hash_functionn(Xp.Lc) ; 
+                    DIDui := xor_functionn (TIDUi, N1);
+                    UG := xor_functionn (SIDj.N1.Lc.Xn, V2); 
+                    HUG := hash_functionn (SIDj.N1.Lc.Xn); 
+                    Actor->GWN: DIDui.UG.HUG;
+                    GWN-> Actor: ?M.?HM; 
+
+                    % M could be  C or GU so we verifie if it have GID.SIDj or not
+                    if ( ! is_it_GID_SIDj( xor_functionn(M, V2) ) ) { 
+                        if (hash_functionn (M.V2) = HM) {
+                            N5 := xor_functionn (M, V2); 
+                            X5 := x5_in_DB(Actor, N5); 
+                            secrecy_goal secret_X5: Actor, GWN: X5;
+                            R := xor_functionn (X5, V2); 
+                            RHMAC := hash_functionn (R.N5); 
+                            Actor  ->  GWN: R.RHMAC; 
+                            secrecy_goal secret_N5: Actor, GWN: N5;
+                        }
+                    }
+                    else {
+                        N2 := recupere_N2(Actor, M);
+                        N3 := recupere_N3(Actor, M);
+                        if (hash_functionn(N2.N3.hash_functionn(N1.N2.N3)) = HM) {
+                            Sk := hash_functionn (N1.N2.N3);
+                            store_Sk(Actor, Sk);
+                        }
+                    }
+                    secrecy_goal secret_N2: Actor, GWN, B: N2;
+                    secrecy_goal secret_N3: Actor, GWN, B: N3;
+                }
+            }
+
+            entity Gateway(A, Actor, B: agent) {
+	        	symbols 
+                    GID, SIDj, DIDui, UG, HUG, GU, HGU, GS, HGS, SG, HSG, Lc: message; 
+                    N1, N2, N3, V2, V3, Sk: message; 
+                    Lp, TD, Lmax: message; % Lp = previous location stored in GWN, TD = time difference, Lmax = max location
+                    inf_LDmax (agent, message, message, message, message): fact; % return true if Lc inferior to Lmax
+                    N5, C, HMAC, R, RHMAC, X5: message; 
+                    nonpublic random_N5_from_DB(agent, agent): message;
+                    nonpublic x5_in_DB(agent, message): fact; 
+                    nonpublic store_Lc_DB(agent, message): fact;
+                    redo_Authentification(agent, agent, agent): fact; 
+
+                body {
+                    A ->  Actor: ?DIDui.?UG.?HUG ;
+                    if (hash_functionn(xor_functionn(UG, V2)) = HUG) {
+                        if ( ! inf_LDmax(Actor, Lc, Lp, TD, Lmax)) {
+                            N5 := random_N5_from_DB(Actor, A); 
+                            secrecy_goal secret_N5: Actor, A: N5;
+                            C := xor_functionn (N5, V2); 
+                            HMAC := hash_functionn (C.N5); 
+                            Actor -> A: C.HMAC; 
+                            A -> Actor: ?R.?RHMAC; 
+                            if (hash_functionn (R.N5) = RHMAC) {
+                                X5 := xor_functionn (R, V2); 
+                                secrecy_goal secret_X5: Actor, A: X5;
+                                if ( x5_in_DB(Actor, X5)) {
+                                    store_Lc_DB(Actor, Lc); 
+                                    redo_Authentification(A, Actor, B); 
+                                }
+                            }
+                            secrecy_goal secret_Lc: Actor, A : Lc; 
+
+                        }
+                        else {
+                            N2 := fresh(); 
+                            secrecy_goal secret_N2: Actor, A, B: N2;
+                            GS := xor_functionn (N1.N2, V3); 
+                            HGS := hash_functionn (N1.N2); 
+                            Actor -> B: GS.HGS; 
+                            ? -> Actor: ?SG.?HSG ; 
+                            if (hash_functionn (xor_functionn (SG, V3)) = HGS) {
+                                GU := xor_functionn (GID.SIDj.N2.N3, V2); 
+                                HGU := hash_functionn (N2.N3.Sk); 
+                                Actor -> A: GU.HGU; 
+                            }
+                            secrecy_goal secret_N1: Actor, A, B: N1;
+                            secrecy_goal secret_N3: Actor, A, B: N3;
+                            secrecy_goal secret_Lc: Actor, A : Lc; 
+
+                        }
+                    }
+                }
+            }
+            entity Bob(A, GWN, Actor: agent) {
+                symbols
+                    GS, HGS, SIDj, V3, N1, N2, N3: message;
+                    Sk, SG, HSG: message;  
+                    nonpublic recupere_N1(agent, message): message;
+                    nonpublic recupere_N2(agent, message): message;
+
+                body{
+                    ? -> Actor: ?GS.?HGS; 
+                    if (hash_functionn (xor_functionn (GS, V3)) = HGS) {
+                        N1 := recupere_N1(Actor, GS); 
+                        N2 := recupere_N2(Actor, GS); 
+                        N3 := fresh() ; 
+                        secrecy_goal secret_N3: Actor, A, GWN: N3;
+                        Sk := hash_functionn (N1.N2.N3); 
+                        SG := xor_functionn (SIDj.N3, V3); 
+                        HSG := hash_functionn (N3.Sk); 
+                        Actor -> GWN: SG.HSG;
+                    }
+                    secrecy_goal secret_N1: Actor, A, GWN: N1;
+                    secrecy_goal secret_N2: Actor, A, GWN: N2;
+                }
+            }
+            body { 
+                new Alice(A, GWN, B);
+                new Gateway(A, GWN, B); 
+                new Bob(A, GWN, B);
+            }
+        }   
+        entity ChangePW_without_RA(A, GWN, B: agent) {
+            entity Alice(Actor, GWN, B: agent) {
+	        	symbols 
+                    PWi, IDUi: message;
+                    GID, SIDj, TIDUi: message;
+                    V1, V2, V3: message;
+                    Sk: symmetric_key; 
+                    nonpublic choose_anathor_password (agent): message;
+                    nonpublic store_V1(message): fact ;
+
+                body { 
+                    PWi := choose_anathor_password(Actor); 
+                    V1 := hash_functionn( IDUi . PWi ) ;
+                    store_V1(V1); 
+                    V2 := hash_functionn (GID . xor_functionn(IDUi, PWi)); 
+                    V3 := hash_functionn(xor_functionn(GID, IDUi.PWi)) ; 
+                    Actor -> GWN: {| TIDUi . V2 . V3 |}_Sk ;   
+                    Actor -> B: {| V3 |}_Sk ; 
+                }
+            }
+            entity GWN(A, Actor: agent) {
+                symbols
+                    TIDUi: message;
+                    nonpublic noninvertible update_tid_V2_V3(agent, message, message, message): fact; 
+                    V2, V3: message; 
+                    Sk: symmetric_key; 
+
+                body {
+                    ? -> Actor: {| ?TIDUi . ?V2 . ?V3 |}_Sk ; 
+                    update_tid_V2_V3(Actor, TIDUi, V2, V3); 
+                }
+            }
+            entity Bob(A, Actor: agent) {
+                symbols
+                    nonpublic noninvertible store_V3(agent, message): fact; 
+                    V3: message; 
+                    Sk: symmetric_key; 
+
+                body {
+                    ? -> Actor: {| ?V3 |}_Sk ; 
+                    store_V3(Actor, V3); 
+                }
+            }
+            body { 
+                new Alice(A, GWN, B);
+                new GWN(A, GWN); 
+                new Bob(A, B); 
+            }
+    }
+        body { 
+                new Registration(A, RA, GWN, B);
+                new Authentification(A, GWN, B);
+                new ChangePW_without_RA(A, GWN, B); 
+            }
+    }

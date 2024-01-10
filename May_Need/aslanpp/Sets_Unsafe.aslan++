@@ -1,0 +1,37 @@
+% TESTED FEATURES: sets, while
+% EXPECTED OUTCOME: Unsafe
+% @clatse(--nb 2)
+specification Sets_Unsafe
+channel_model CCM
+
+entity SetManager
+{
+	symbols
+		Numbers : nat set;
+		a_even, a_odd : agent;
+		nonpublic succ(nat) : nat;
+
+	entity Agent(Actor : agent, N : nat, S : nat set) 
+	{
+		body
+		{
+			while (true) 
+			{
+				remove(S, N); % if you comment out this line, no attack can be found
+				N := succ(succ(N));
+				add(S, N);
+			}
+		}
+	}
+
+	body 
+	{
+		Numbers := { 0, 1,5,8 };
+		new Agent(a_even, 0, Numbers);
+		new Agent(a_odd , 1, Numbers);
+	}
+
+	goals
+		five : [](forall Numbers . !(contains(Numbers, succ(succ(succ(succ(1))))) 
+                                       & !contains(Numbers,           succ(succ(1))) ));
+}

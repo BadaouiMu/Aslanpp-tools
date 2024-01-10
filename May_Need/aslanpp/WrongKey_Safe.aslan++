@@ -1,0 +1,31 @@
+% TESTED FEATURES: translator warnings
+% EXPECTED OUTCOME: Safe
+specification WrongKey_Safe____  %% translator issue: should give a warning as name does not agree with file name!
+channel_model CCM
+
+entity Environment
+{
+	symbols 
+		a, b : agent;
+		nonpublic tok : message;
+
+	entity Alice(Actor, B : agent) {
+		body {
+			Actor -> B : {tok}_pk(Actor); % wrong key
+			Actor -> B : {tok}_inv(pk(B)); % translator should warn about wrong key here
+		}
+	}
+
+	entity Bob(A, Actor : agent) {
+		body {
+			A -> Actor : {tok}_pk(A); % translator should warn about wrong key here
+			A -> Actor : {tok}_inv(pk(Actor)); % wrong key
+			assert better_not_get_here: false;
+		}
+	}
+
+	body {
+		new Alice(a, b);
+		new Bob  (a, b);
+	}
+}

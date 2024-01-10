@@ -1,0 +1,49 @@
+% @ofmc(NO)
+% @satmc(NO)
+% @clatse()
+% TESTED FEATURES: intruder changes a set for which he knows the reference
+% EXPECTED OUTCOME: Unsafe
+specification SetsGlobalIntruderChanges_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  types
+    elem < message;
+  symbols 
+    a, b : agent;
+    elem1: elem;
+    elem2: elem;
+    setwrap(elem set): message;
+    finished: text;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      GlobalSet: elem set;
+    body {
+      GlobalSet := {elem1,elem2};
+      Actor -> B: setwrap(GlobalSet); % Set sent *not* confidentially such that Cl-AtSe's intruder can manipulate it
+       %assert iknows_set_reference: iknows(GlobalSet); % This should be fulfilled
+      select {
+        on(B *-> Actor: finished): {
+          assert test: GlobalSet->contains(elem1); % The intruder could have removed elem1 meanwhile!
+        }
+      }
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      GlobalSet: elem set;
+    body {
+      A -> Actor : setwrap(?GlobalSet);
+      GlobalSet->remove(elem2);
+      Actor *-> A: finished;
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+}

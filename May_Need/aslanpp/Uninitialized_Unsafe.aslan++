@@ -1,0 +1,58 @@
+specification Uninitialized_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols
+    uninitialized_msg(message    ): fact;
+    uninitialized_set(message set): fact;
+
+  symbols   
+    UA: agent;
+    UM: message;
+    UK: symmetric_key;
+    UN: nat;
+    UP: public_key;
+    US: private_key;
+    UT: text;
+
+    SA: agent set;
+    SM: message set;
+    SK: symmetric_key set;
+    SN: nat set;
+    SP: public_key set;
+    SS: private_key set;
+    ST: text set;
+
+  entity Test {  % implicit Actor parameter not initialized!
+    symbols
+      U: message;
+      S: message set;
+    body {
+      send(i,U);      % sends an uninitialized msg variable!
+      S->add(i);      % uses  an uninitialized set variable!
+      S := {};        % initializes the set variable
+      S->add(U);      % adds  an uninitialized msg variable!
+    }
+  }
+
+  body
+  {
+    uninitialized_msg(UA); uninitialized_set(SA);
+    uninitialized_msg(UM); uninitialized_set(SM);
+    uninitialized_msg(UK); uninitialized_set(SK);
+    uninitialized_msg(UN); uninitialized_set(SN);
+    uninitialized_msg(UP); uninitialized_set(SP);
+    uninitialized_msg(US); uninitialized_set(SS); 
+    uninitialized_msg(UT); uninitialized_set(ST);
+
+    new Test;
+  }
+  goals
+    no_uninitialized_msg: [](forall U  . 
+                  !(     iknows(U) & uninitialized_msg(U)));
+    no_uninitialized_set: [](forall U S. 
+                  !(S->contains(U) & uninitialized_set(S)));
+    no_uninitialized_mem: [](forall U S. 
+                  !(S->contains(U) & uninitialized_msg(U)));
+}

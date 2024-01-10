@@ -1,0 +1,46 @@
+% TESTED FEATURES: secrecy goals, dynamic binding of knowing agents
+% EXPECTED OUTCOME: Safe
+specification SecrecyGoals_Safe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    I, B : agent;
+    a, b, b0, c : agent;
+    alias(agent): agent;
+
+  entity Alice(Actor, B1, B2: agent) {
+    symbols
+      Tok: message;
+    body {
+      secret_token:(Tok) := fresh();
+      Actor *->* B1 : Tok;
+     %iknows(Tok); % this would show that the channel/secrecy goal will wrongly wrongly stretch to 'a' and 'B'!
+    }
+  }
+
+  entity Bob(A, Actor: agent) {
+    symbols
+      Tok : message;
+    body {
+      A := c; % at first, overwrite A with different value
+      % translator issue: the two statements could be lumped, ignoring the first value 'c' assigned to A
+      ?A *->* Actor : secret_token:(?Tok); % Bob learns A here!
+      iknows(Tok); % intruder is allowed to know Tok
+    }
+  }
+
+  body {
+    select { on(?I=i): I := I; } % to make the value of I not statically clear
+    B := b0;
+  % first an honest Alice instance:
+    new Alice(a, B, b0); % translator bug: must warn that channel&secrecy goal will wrongly stretch to 'a' and 'B'!
+%   new Alice(I, b, b);      % translator bug: do not warn on, nor ignore, multiple occurrences of agent terms like 'b' for *secrecy* goals
+    new Alice(I, b, B);      % translator bug: replacing 'b' by 'alias(b)' or 'alias(B)' in channel&secrecy goal must work, too!
+    new Bob  (I, b   );      % translator bug: replacing 'b' by 'alias(b)' or 'alias(B)' in channel&secrecy goal must work, too!
+%   new Bob  (I, b   );      % translator issue: do not warn on such repeated occurrences of 'I' and 'b' in the same argument positions for channel&secrecy goals
+  }
+  goals
+    secret_token:(_) {I, b}; % translator bug: replacing 'b' by 'alias(b)' or 'alias(B)' in channel/secrecy goal must work, too!
+}

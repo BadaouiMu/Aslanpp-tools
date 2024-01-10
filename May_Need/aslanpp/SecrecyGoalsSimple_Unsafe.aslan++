@@ -1,0 +1,18 @@
+% TESTED FEATURES: channels, secrecy goals
+% EXPECTED OUTCOME: Unsafe
+specification SecrecyGoalsSimple_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols 
+		alice, bob, cooper : agent;
+		token : message; % public token -> secrecy goal violated
+
+	body {
+	}
+
+	goals 
+	      secret_token : [](!iknows(token));	
+}
+

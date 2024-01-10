@@ -1,0 +1,37 @@
+% TESTED FEATURES: channels, channel authentication goals
+% EXPECTED OUTCOME: Unsafe
+specification ChannelGoalsAuth_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  symbols 
+    a, b : agent;
+    peer (agent): agent;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      Nonce : text;
+
+    body {
+      Nonce := fresh();
+      Actor -> B : Auth_a_b_nonce:(Nonce);
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      OtherNonce : text;
+
+    body {
+      A -> Actor : Auth_a_b_nonce:(?OtherNonce);
+    }
+  }
+
+  body {
+    new Alice(a, peer(a));
+    new Bob  (a, peer(a));
+  }
+  goals
+    Auth_a_b_nonce:(_) a *-> peer(a); %# translator restriction here: does not allow "peer(a)"
+}

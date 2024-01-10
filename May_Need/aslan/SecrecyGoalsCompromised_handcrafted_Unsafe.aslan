@@ -1,0 +1,155 @@
+% Specification: SecrecyGoalsCompromised_Safe
+% Channel model: CCM
+% Goals as attack states: yes
+% Orchestration client: N/A
+% Horn clauses level: ALL
+% Optimization level: LUMP
+% Stripped output (no comments and line information): no
+section signature:
+	message > text
+	ak : agent -> public_key
+	ck : agent -> public_key
+	defaultPseudonym : agent -> agent
+	descendant : nat * nat -> fact
+	dishonest : agent -> fact
+	isAgent : agent -> fact
+	pk : agent -> public_key
+	secret_token_set : nat -> set(agent)
+	sign : private_key * message -> message
+	state_Alice : agent * nat * nat * agent -> fact
+	state_Bob : agent * nat * nat * agent * message -> fact
+	state_Environment : agent * nat * nat -> fact
+	dishonest_member : set(agent) -> fact
+
+section types:
+	A : agent
+	Actor : agent
+	Ak_arg_1 : agent
+	B : agent
+	Ck_arg_1 : agent
+	Descendant_Closure_arg_1 : nat
+	Descendant_Closure_arg_2 : nat
+	Descendant_Closure_arg_3 : nat
+	E_A_Actor : agent
+	E_A_IID : nat
+	E_A_SL : nat
+	E_B_Actor : agent
+	E_B_IID : nat
+	E_B_SL : nat
+	IID : nat
+	IID_1 : nat
+	IID_2 : nat
+	Knowers : set(agent)
+	Msg : message
+	Pk_arg_1 : agent
+	SL : nat
+	Sign_arg_1 : private_key
+	Sign_arg_2 : message
+	Tok : message
+	Tok_1 : message
+	a : agent
+	atag : text
+	b : agent
+	ctag : text
+	dummy_agent : agent
+	dummy_message : message
+	dummy_nat : nat
+	false : fact
+	secret_token : protocol_id
+	stag : text
+	tok : message
+	true : fact
+	Set : set(agent)
+	Member: agent
+
+section inits:
+
+initial_state init :=
+	dishonest(i).
+	iknows(a).
+	iknows(atag).
+	iknows(b).
+	iknows(ctag).
+	iknows(i).
+	iknows(inv(ak(i))).
+	iknows(inv(ck(i))).
+	iknows(inv(pk(i))).
+	iknows(stag).
+	isAgent(a).
+	isAgent(b).
+	isAgent(i).
+	state_Environment(dummy_agent, dummy_nat, 1).
+	true
+
+section hornClauses:
+
+	hc dishonest_member_(Set, Member) :=
+		dishonest_member(Set) :- 
+			contains(Member, Set),
+			dishonest(Member)
+
+section rules:
+
+% line 35
+% new instance	
+%     new Alice(a,b)
+% lumped line 36 (skipped step label 2)
+% new instance
+%     new Bob(a,b)
+step step_1_Environment__line_35(Actor, IID, IID_1, IID_2) :=
+	state_Environment(Actor, IID, 1)
+	=[exists IID_1, IID_2]=>
+	descendant(IID, IID_1).
+	descendant(IID, IID_2).
+	state_Alice(a, IID_1, 1, b).
+	state_Bob(b, IID_2, 1, a, dummy_message).
+	state_Environment(Actor, IID, 3)
+
+% line 15
+% introduce facts
+%     iknows(crypt(ck(B),sign(inv(ak(E_A_Actor)),stag.B.tok)))
+% lumped line 16 (skipped step label 2)
+% introduce facts due to lumping
+%     secret(tok,secret_token,{E_A_Actor, B})
+% lumped line 19 (skipped step label 3)
+% introduce facts due to lumping
+%     dishonest(E_A_Actor)
+% lumped line 20 (skipped step label 4)
+% introduce facts due to lumping
+%     iknows(inv(pk(E_A_Actor)))
+% lumped line 21 (skipped step label 5)
+% introduce facts due to lumping
+%     iknows(tok)
+step step_2_Alice__line_15(B, E_A_Actor, E_A_IID) :=
+	state_Alice(E_A_Actor, E_A_IID, 1, B)
+	=>
+	contains(B, secret_token_set(E_A_IID)).
+	contains(E_A_Actor, secret_token_set(E_A_IID)).
+%	dishonest(E_A_Actor).
+	iknows(crypt(ck(B), sign(inv(ak(E_A_Actor)), pair(stag, pair(B, tok))))).
+	iknows(inv(pk(E_A_Actor))).
+	iknows(tok).
+	secret(tok, secret_token, secret_token_set(E_A_IID)).
+	state_Alice(E_A_Actor, E_A_IID, 6, B)
+
+% line 29
+% retract facts
+%     iknows(crypt(ck(E_B_Actor),sign(inv(ak(A)),stag.E_B_Actor.?Tok)))
+% lumped line 30 (skipped step label 2)
+% introduce facts due to lumping
+%     secret(Tok,secret_token,{A, E_B_Actor})
+step step_3_Bob__line_29(A, E_B_Actor, E_B_IID, Tok, Tok_1) :=
+	iknows(crypt(ck(E_B_Actor), sign(inv(ak(A)), pair(stag, pair(E_B_Actor, Tok_1))))).
+	state_Bob(E_B_Actor, E_B_IID, 1, A, Tok)
+	=>
+	contains(A, secret_token_set(E_B_IID)).
+	contains(E_B_Actor, secret_token_set(E_B_IID)).
+	secret(Tok_1, secret_token, secret_token_set(E_B_IID)).
+	state_Bob(E_B_Actor, E_B_IID, 3, A, Tok_1)
+
+section goals:
+
+attack_state secret_token(Knowers, Msg) :=
+	iknows(Msg).
+	secret(Msg, secret_token, Knowers).
+	not(dishonest_member(Knowers))

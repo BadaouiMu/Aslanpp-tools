@@ -1,0 +1,44 @@
+% TESTED FEATURES: channels, channel freshness goals
+% EXPECTED OUTCOME: Unsafe
+specification ChannelGoalsFresh_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+		a, b : agent;
+
+	entity Alice(Actor, B : agent) {
+		symbols
+			OtherNonce, Payload : text;
+			token : text;
+
+		body {
+			B ->* Actor: ?OtherNonce;
+			Payload := token;
+		      % Payload := fresh(); %% this one would be really fresh
+			Actor *->* B : OtherNonce.Payload;
+     			channel_goal not_really_fresh_Payload : Actor *->> B : Payload;
+		}
+	}
+
+	entity Bob(A, Actor : agent) {
+		symbols
+			Nonce, OtherPayload : text;
+
+		body {
+			Nonce := fresh();
+			Actor ->* A : Nonce;
+			A *->* Actor : Nonce.?OtherPayload;
+			channel_goal not_really_fresh_Payload : A *->> Actor : OtherPayload;
+		}
+	}
+
+	body {
+		new Alice(a, b);
+		new Bob  (a, b);
+	% second "session" allowing for replay attacks:
+		new Alice(a, b);
+		new Bob  (a, b);
+	}
+}

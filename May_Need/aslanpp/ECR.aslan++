@@ -1,0 +1,243 @@
+% eHR Scene 10 and eHR Scene 11, running in parallel
+% Transfer of eHR documents from inside or from outside the hospital
+
+% Results of examinations done inside the hospital (also reports written
+% in other departments of the hospital) can be ordered by the attending
+% doctor (or another authorized person). The transport of data/documents
+% within the hospital between a requesting doctor A and a responding doctor B
+% can be considered secure due to the protection provided by SSL mechanisms.
+% This scenario is also applicable to requests  to external partners
+% where e.g. doctor A and doctor B are assigned to different systems:
+% system(A) and system(B) respectively. In such a case a secure channel
+% between system(A) and system(B) is assumed.
+% The roles in the scenes are the following:
+% Requesting doctor = doctor A,
+% Responding doctor = doctor B,
+% Requesting system = system where doctor A is registered/known,
+% Responding system = system where doctor B is registered/known,
+% Patient = patient C and
+% Central database DB where the EHR of patient C is stored.
+% According to the requesting system' policy either the requesting doctor or
+% the requesting system is responsible for putting the received documents
+% in the eHR of the patient in the central data base of the hospital.
+% We consider both cases, determined by the instantiation of the Req_Sys_role.
+
+specification ECR channel_model CCM
+
+entity Environment {
+
+  types
+  % dr  < agent; % would not allow for the intruder acting as a doctor
+    pat < agent;
+    sys < agent;
+    ehr < text;
+    policy < text;
+
+  symbols
+    req_sys1, req_sys2, rsp_sys: sys;
+    patient1    , patient2    : pat;
+    patient1_EHR, patient2_EHR: ehr;
+    central_db: agent;
+    doctor, system: policy;
+    domain(agent,sys): fact;
+    t0,t1,t2,t3,t4,t5                                  : text;
+    details         (agent,pat)                        : text;
+    results         (agent,pat,text)                   : text;
+
+    % the messages names are
+    order_request   (agent,pat,agent,sys    ,text)     : message;
+    order_response  (agent,pat,agent,sys,sys,text)     : message;
+    order_package_request  (sys,sys,agent,message)     : message;
+    order_package_response (sys,sys,agent,message)     : message;
+    confirm_response(agent,sys,message,message,policy) : message;
+    store_EHR       (message, message)                 : message;
+
+  macros
+    signed_message (M,T,A) = (M.T).sign(inv(pk(A)),M.T);
+
+  entity Req_Sys_role (Actor: sys, Policy: policy) {
+    symbols
+      Oreq, Oresp, Soreq, Soreqsys, Soresp, Sorespsys: message;
+      Req_Dr, Rsp_Dr: agent;
+      Pat: pat;
+      Rsp_Sys: sys;
+    body {
+      select {
+        on(?Req_Dr ->* Actor: ?Soreq
+           & domain(?Req_Dr,Actor)
+           & ?Soreq = signed_message(?Oreq,?,?Req_Dr)
+           &  ?Oreq = order_request(?Rsp_Dr,?Pat,?Req_Dr,Actor,
+                                    details(?Req_Dr,?Pat))                     %%2a
+           & domain(?Rsp_Dr,?Rsp_Sys)
+          ): {
+          %assert Rsp_domain: domain(Rsp_Dr,Rsp_Sys); %% trivial due to the above
+          Soreqsys := order_package_request(Rsp_Sys,Actor,Req_Dr,              %%2b
+                                            signed_message(Soreq,t1,Actor));   %%2c
+          Actor *->* Rsp_Sys: Soreqsys;
+        }
+      }
+
+      select {
+        on(Rsp_Sys *->* Actor: ?Sorespsys
+           & ?Sorespsys = order_package_response(Actor,Rsp_Sys,?,
+                                                 signed_message(?Soresp,?,Rsp_Sys))
+           & ?Soresp = signed_message(?Oresp,?,?)                              %%6a,6b
+           & ?Oresp = order_response(?Req_Dr,?,?,Actor,Rsp_Sys,?)
+           & domain(?Req_Dr,Actor)
+          ): {
+          assert Rsp_domain: domain(Rsp_Dr,Rsp_Sys);
+          if (Policy = system)
+            Actor *->* central_db: store_EHR(Soreq,Soresp);                    %%6e
+          Actor ->* Req_Dr: signed_message(confirm_response(Req_Dr,Actor,
+                                           Soreq,Soresp,Policy),t5,Actor);     %%6c,6d
+        }
+      }
+    }
+  }
+
+  entity Rsp_Sys_role (Actor: sys) {
+    symbols
+      Oreq, Soreq, Soreqsys, Soresp, Sorespsys : message ;
+      Rsp_Dr, Req_Dr: agent;
+      Req_Sys: sys;
+    body {
+      select {
+        on(?Req_Sys *->* Actor: ?Soreqsys
+           & ?Soreqsys = order_package_request(Actor,?Req_Sys,?,
+                                               signed_message(?Soreq,?,?Req_Sys))
+           & ?Soreq = signed_message(?Oreq,?,?)
+           & ?Oreq = order_request(?Rsp_Dr,?,?Req_Dr,?,?)                      %%3a,3b
+           & domain(?Rsp_Dr,Actor)
+          ):   {
+          assert Req_domain: domain(Req_Dr,Req_Sys);
+          Actor ->* Rsp_Dr: signed_message(Soreq,t4,Actor);
+        }
+      }
+      select {
+        on(Rsp_Dr ->* Actor: ?Soresp
+           & ?Soresp = signed_message(?,?,Rsp_Dr)                              %%5a
+           & domain(Rsp_Dr,Actor)
+          ): {
+          Sorespsys := order_package_response(Req_Sys,Actor,Rsp_Dr,
+                                              signed_message(Soresp,t3,Actor));%%5b
+          Actor  *->* Req_Sys: Sorespsys;                                      %%5c
+        }
+      }
+    }
+  }
+
+  entity Session (Req_Dr: agent, Req_Sys: sys, Rsp_Sys: sys, Rsp_Dr: agent, Pat: pat, EHR: ehr) {
+    entity Req_Dr_role (Actor: agent, Rsp_Dr: agent, Pat: pat) {
+      symbols
+        Oreq, Soreq, Oresp, Soresp: message;
+        Results: text;
+        Policy: policy;
+        Req_Sys, Rsp_Sys: sys;
+      body {
+        if (domain(Actor,?Req_Sys))
+        {
+          Oreq := order_request(Rsp_Dr,Pat,Actor,Req_Sys,details(Actor,Pat));
+
+          %% (S3) Non-repudiation
+          Soreq := signed_message(Oreq,t0,Actor);                              %%1a
+
+          Actor ->* Req_Sys: Soreq;                                            %%1b
+          channel_goal secure_Req_Dr_Soreq_Rsp_Dr: Actor *->* Rsp_Dr: Soreq;
+          %% (S2) Consistency, (S4) Trust Transitivity
+          select{
+            on (Req_Sys ->* Actor:  signed_message(confirm_response(Actor,
+                                      Req_Sys,Soreq,?Soresp,?Policy),?,Req_Sys)
+                & ?Soresp = signed_message(?Oresp,?,?)
+                & ?Oresp = order_response(Actor,Pat,Rsp_Dr,Req_Sys,?,?Results)
+                                                                               %%7a
+               ):
+            channel_goal secure_Rsp_Dr_Soresp_Req_Dr: Rsp_Dr *->* Actor: Soresp;
+            %% (S1) Confidentiality, (S2) Consistency, (S4) Trust Transitivity
+            {
+              assert goal_Soresp_is_signed_by_Rsp_Dr:
+                Soresp = signed_message(Oresp,t2,Rsp_Dr); %% secondary goal
+              %% (S2) Consistency, (S3) Non-repudiation
+              if (Policy = doctor)
+                Actor *->* central_db: store_EHR(Soreq,Soresp);                %%7b
+              %Req_Dr is very happy for having received the results!!          %%7a
+              %assert finished_Req_Dr: false; %% just for executability testing!
+            }
+          }
+        }
+        %else failed because cannot find requesting system
+      }
+    }
+
+    entity Rsp_Dr_role (Actor: agent) {
+      symbols
+        Oreq, Oresp, Soreq, Soresp: message;
+        Req_Dr: agent;
+        Req_Sys,Rsp_Sys: sys;
+        Pat: pat;
+        Details: text;
+      body {
+        select {
+          on(?Rsp_Sys ->* Actor: signed_message(?Soreq,?,?Rsp_Sys)
+             & domain(Actor,?Rsp_Sys)
+             & ?Soreq = signed_message(?Oreq,?,?)                              %%4a
+             & ?Oreq = order_request(Actor,?Pat,?Req_Dr,?Req_Sys,?Details)     %%4b
+            ):
+            channel_goal secure_Req_Dr_Soreq_Rsp_Dr: Req_Dr *->* Actor: Soreq;
+            %% (S2) Consistency, (S4) Trust Transitivity
+          {
+            assert goal_Soreq_is_signed_by_Req_Dr:
+            Soreq = signed_message(Oreq,t0,Req_Dr); %% secondary goal
+            %% (S2) Consistency, (S3) Non-repudiation
+            Oresp := order_response(Req_Dr,Pat,Actor,Req_Sys,Rsp_Sys,
+                     results(Actor,Pat,Details));                              %%4c
+            %% (S3) Non-repudiation
+            Soresp := signed_message(Oresp,t2,Actor);                          %%4d
+
+            Actor  ->* Rsp_Sys: Soresp;                                        %%4e
+            channel_goal secure_Rsp_Dr_Soresp_Req_Dr: Actor *->* Req_Dr: Soresp;
+            %% (S1) Confidentiality, (S2) Consistency, (S4) Trust Transitivity
+          }
+        }
+      }
+    }
+
+    entity EHR_DB_role (Actor: agent) {
+      symbols
+        Soreq, Soresp : message;
+        Req_Dr: agent;
+        Req_Sys: sys;
+      body {
+        select { 
+          on(?Req_Dr *->* Actor: store_EHR(?Soreq,?Soresp) &
+             domain(?Req_Dr,?Req_Sys)): {}
+          on(?Req_Sys *->* Actor: store_EHR(?Soreq,?Soresp) &
+             domain(?Req_Dr,?Req_Sys)): {}
+        }
+        % Add to data base                                                     %%6e,7b
+        %assert finished_all: false; %% just for executability testing!
+      }
+    }
+
+    body { % of entity Session
+      if(!dishonest(Req_Dr))
+        domain(Req_Dr,Req_Sys);
+      if(!dishonest(Rsp_Dr))
+        domain(Rsp_Dr,Rsp_Sys);
+      new Req_Dr_role (Req_Dr, Rsp_Dr, Pat);
+      new Rsp_Dr_role (Rsp_Dr);
+      new EHR_DB_role (central_db);
+    }
+  }
+
+  body { % of entity Environment
+    new Req_Sys_role (req_sys1, system);
+    new Req_Sys_role (req_sys2, doctor);
+    new Rsp_Sys_role (rsp_sys);
+
+    any Req_Dr  Rsp_Dr. Session(Req_Dr, req_sys1, rsp_sys, Rsp_Dr, patient1, patient1_EHR)
+  where Req_Dr!=Rsp_Dr;
+
+    any Req_Dr  Rsp_Dr. Session(Req_Dr, req_sys2, rsp_sys, Rsp_Dr, patient2, patient2_EHR)
+  where Req_Dr!=Rsp_Dr;
+  }
+}

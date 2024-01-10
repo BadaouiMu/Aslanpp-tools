@@ -1,0 +1,820 @@
+specification pb_scene1 channel_model CCM
+%% Modeler: Yoann Lamy, OpenTrust 
+%% Documentation: Standalone-PB.pdf
+%% Description : 
+%% Involves seven entities : Bidder, BM, TC, BP, SS, TS, Ar
+%% Secrecy properties: 
+%%     secrecy of the offers
+%%     non-repudiation of the offers
+%%     integrity of the offers
+%%     authentication of the participants    
+
+
+
+%% ///////////////////////////////////////////////////////////////MASTER ENTITY
+
+entity Environment {
+
+%% ///////////////////////////////////////////////////////////////TYPES
+
+types
+  doc < message;
+  message_end < message;
+  date < message;
+  header < message;
+ 
+%% ///////////////////////////////////////////////////////////////SYMBOLS
+
+symbols
+
+  %% Agents 
+  ss, bp, bm, tc, alice, bob, eve, ts, ar : agent;
+
+  %% Keys
+  symmetricKey (agent,agent) : symmetric_key;	  
+
+  %% Headers
+  timestamp_request : header;
+  signature_request : header;
+  signature_validation_request : header;
+  archiving_request : header;
+  upload_public_key_BM : header; 
+  upload_public_key_TC : header;
+  upload_tender : header;
+  valid_signature : header;
+
+  %% Messages
+  nonpublic submission_request (agent) : message;
+  nonpublic candidates_download_request (agent) : message;
+  nonpublic technical_proposals_download_request (agent) : message;
+  nonpublic reports_download_request : message;
+  nonpublic winner_request : message;
+  hash (message) : message;
+  nonpublic acknowledgement(message) : message;
+  ended : message_end;
+
+  %% Naturals
+  succ(nat) : nat;
+
+  %% Facts Used For goals
+
+  %% for authentication
+  witness_auth(agent,agent,message) : fact;
+  request_auth(agent,agent,message) : fact;
+  
+  %% for non repudiation
+  witness_non_repudiation(agent,agent,message): fact;
+  request_non_repudiation(agent,agent,message): fact;
+  
+  %% for integrity
+  offer_added(agent,agent,message,agent) : fact;
+  add_offer(agent,agent,message,agent) : fact;
+  offer(agent,message) : fact;
+
+
+%% ///////////////////////////////////////////////////////////////MACROS
+
+ macros
+
+  %% signed (A,M) : the signature of the message M by the agent A
+  signed(Agent,Message) = Message.sign(inv(pk(Agent)),hash(Message));
+
+  %% timestamped (A,T,M) : the message M is timpestamped 
+  %% (hashed and concatenated with T) then signed by A
+  timestamped(Agent,Time,Message) = 
+        hash(Message).Time.sign(inv(pk(Agent)),hash(hash(Message).Time));
+
+  receipt(Message) = hash(Message);
+
+  %% application_form
+  application_form(Tender,Public_Key1,Public_Key2) = 
+        (Tender.Public_Key1.Public_Key2);
+
+  %% application 
+  application(Agent,EncTender,EncFP,EncTP) = 
+          % signed(Agent,EncTender)
+        (EncTender.sign(inv(pk(Agent)),hash(EncTender))).
+          % signed(Agent,EncFP)
+        EncFP.sign(inv(pk(Agent)),hash(EncFP)).
+          % signed(Agent,EncTP))
+        EncTP.sign(inv(pk(Agent)),hash(EncTP));
+
+
+
+%% ///////////////////////////////////////////////////////////////ENTITIES
+
+ 
+%% ---------------------------------------------BidManager
+
+  entity BidManager(Actor, BP : agent, Are_Eligible_Bidders : agent set) {
+ 
+
+  symbols
+
+    Tender : doc;
+
+    Result : message;
+    Sequence : message;
+    Candidates : message;
+    Candidates_message : message;
+    Eligible_candidates : message;
+    Financial_and_reports : message;
+    Time : date;
+
+    Bidder, SS, TS : agent;   
+    noninvertible winner(message) : agent;
+
+    is_eligible (agent) : fact;
+    publication_Key_Tender_BM_ok : fact;
+    
+ 
+  body {
+    
+   %% '''''''' Publication phase - BidManager
+    
+    Tender:=fresh();
+
+     %% He uploads his public key - he waits for its receipt
+    send(BP,upload_public_key_BM.pk(Actor));
+     %% fact for authentication
+    witness_auth(Actor,BP,upload_public_key_BM.pk(Actor));
+
+    receive(BP, timestamped(?TS,?Time,signed(?SS,receipt(pk(Actor)))));
+     %% fact for authentication goal
+    request_auth(BP,Actor,timestamped(TS,Time,signed((SS),receipt(pk(Actor)))));
+     %% He sends his tender - he waits for his receipt
+    send(BP, signed(Actor,upload_tender.Tender));
+
+    receive(BP, timestamped(TS,?Time,signed(SS,
+                receipt(signed(Actor,Tender)))));
+    publication_Key_Tender_BM_ok;    
+    
+
+    %% '''''''' Evaluation phase - BidManager 
+
+     %% it is not available unless it was preceeded by 
+     %% the publication of the key and the tender    
+    if (publication_Key_Tender_BM_ok) {
+      send(BP, candidates_download_request(Actor)); 
+       %% get list of application forms-signed
+      receive(BP, signed(SS,?Candidates_message));
+      while (Candidates_message=?Bidder.crypt(pk(Actor),?Tender).?Sequence) {
+        if (Are_Eligible_Bidders -> contains(Bidder)) {
+          Eligible_candidates:=Eligible_candidates.Bidder;
+          Candidates_message:=Sequence;
+        }
+      }
+      Eligible_candidates:=Eligible_candidates.ended;
+       %% uploading the list of elligible candidates 
+       %% and receiving the receipt of this list
+      send(BP,signed(Actor,Eligible_candidates));
+      receive(BP,timestamped(TS,?Time,signed(SS,
+                receipt(signed(Actor,Eligible_candidates)))));
+
+
+    %% '''''''' Decision phase - BidManager 
+
+      send(BP,reports_download_request);
+      receive(BP,signed(SS,?Financial_and_reports));
+   
+       %% choice abstracted via winner function 
+       %% sending the result
+      send(BP,signed(Actor,winner(Financial_and_reports)));
+
+       %% waiting for the receipt of this result
+      receive(BP,timestamped(TS,?Time,signed(SS,
+              receipt(signed(Actor,winner(Financial_and_reports))))));
+    }%% End if
+
+  }%% End of Body BidManager
+  }%% End entity BidManager
+
+
+%% ---------------------------------------------TechnicalCommittee
+
+  entity TechnicalCommittee(Actor, BP : agent) {
+ 
+
+  symbols
+
+   Eligible_technical_proposals : message;
+   Sequence : message;
+   Technical_reports : message;
+   Time : date;
+
+   Report_TP : doc;
+   TP : doc;
+
+   SS : agent;
+   TS : agent;
+
+   publication_Key_TC_ok : fact;
+
+   Number : nat;
+ 
+
+  body {
+
+   %% '''''''' Publication phase - TechnicalCommittee
+    send(BP, upload_public_key_TC.pk(Actor));
+    %% fact for authentication goal
+    witness_auth(Actor,BP,upload_public_key_TC.pk(Actor));
+
+    receive(BP, timestamped(?TS,?Time,signed(?SS,receipt(pk(Actor)))));
+
+     %% fact for authentication goal between BP and TS concerning the receipt of the key
+    request_auth(BP,Actor,timestamped(TS,Time,signed(SS,receipt(pk(Actor)))));
+
+    publication_Key_TC_ok;
+    
+    
+   %% '''''''' Evaluation phase - TechnicalCommittee
+     %% if the TC has already uploaded his public key
+    if (publication_Key_TC_ok) {
+      send(BP, technical_proposals_download_request(Actor));
+      receive(BP,signed(SS,?Eligible_technical_proposals));
+       %% deciphering and reviewing technical proposals 
+       %% and producing evaluation technical report
+      while (Eligible_technical_proposals=?Number.crypt(pk(Actor),?TP).?Sequence) {
+        Report_TP:=fresh();
+        Technical_reports:=Technical_reports.Number.Report_TP;
+        Eligible_technical_proposals:=Sequence;
+      } 
+      Technical_reports:=Technical_reports.ended;
+      send(BP,signed(Actor,Technical_reports));
+      receive(BP,timestamped(TS,?Time,signed(SS,receipt(Technical_reports))));
+    }%% End if
+
+  }%% End Body TechnicalCommittee
+  }%% End entity TechnicalCommittee
+ 
+
+%% ---------------------------------------------BidPortal
+
+  entity BidPortal(Actor, BM, TC, SS : agent) {
+  
+  
+  symbols
+
+    rwitness_key (agent) : fact;
+    rwitness_tender : fact;
+    submission_phase_open : fact;
+    announcement_phase_on : fact;
+     %% used to go on the part 2 of the evaluation phase:
+    get_eligible_candidates : fact;
+     %% used to go to the decision phase:
+    ok_evaluation, ok_decision : fact;
+
+    Puk_BM, Puk_TC : public_key;
+    Tender, Report : doc;
+    Bidder, Winner, TS : agent;
+    Time : date;
+    Num : nat;
+     %% used as an identifier for Bidders
+    Bidder_number : nat; 
+    
+    Sequence : message;
+    Candidates_message : message;
+    Eligible_candidates : message;
+    Eligible_technical_proposals : message;
+    Technical_reports : message;
+    Financial_and_reports : message;
+    Result : message;
+    Message : message;
+    EncTender, EncFP, EncTP : message;
+    Message_Eligible_Candidates : message;
+    Msg_T_Report, Msg_Result : message;
+
+    Applications : (agent,message,message,message,nat) set;
+    Applications2 : (agent,message) set;
+    Result_set : message set;
+
+
+  %% Sub Entity of BidPortal : SubmissionTimer
+  entity SubmissionTimer {  
+    breakpoints {
+      submission_phase_open
+    }
+   
+    body {    
+      submission_phase_open;
+      retract submission_phase_open;
+    }
+  } %% End of the Sub Entity of BidPortal : SubmissionTimer    
+
+
+  body {   
+
+  %% '''''''' Publication phase - BidPortal
+
+    while (!(rwitness_key(BM) & rwitness_key(TC) & rwitness_tender)) {
+         %%witnesses for the tender and keys of BM and TC
+      select {
+         %% Receive BM's key
+        on (receive(BM, upload_public_key_BM.?Puk_BM)) : {
+          rwitness_key(BM);
+
+	  %% fact for authentication between BM and BP concerning the key
+	  request_auth(BM,Actor,upload_public_key_BM.Puk_BM);
+
+          send(SS,scrypt(symmetricKey(SS,Actor), 
+                  timestamp_request.receipt(Puk_BM)));
+          receive(SS,scrypt(symmetricKey(SS,Actor), 
+                  timestamped(?TS,?Time,signed(SS,receipt(Puk_BM)))));
+          send(BM, timestamped(TS,Time,signed(SS,receipt(Puk_BM))));
+	  witness_auth(Actor,BM,timestamped(TS,Time,signed((SS),receipt(Puk_BM))));
+        }
+         %% Receive TC's key
+        on (receive(TC, upload_public_key_TC.?Puk_TC)) : {
+          rwitness_key(TC);
+
+	  %% fact for authentication goal
+	  witness_auth(TC,Actor,upload_public_key_TC.Puk_TC);
+
+          send(SS,scrypt(symmetricKey(SS,Actor), 
+                  timestamp_request.receipt(Puk_TC)));
+          receive(SS,scrypt(symmetricKey(SS,Actor), 
+                  timestamped(TS,?Time,signed(SS,receipt(Puk_TC)))));
+          send(TC, timestamped(TS,Time,signed(SS,receipt(Puk_TC))));
+
+	  %% fact for authentication goal between BP and TS concerning the receipt of the key
+	  witness_auth(Actor,TC,timestamped(TS,Time,signed(SS,receipt(Puk_TC))));
+        }  
+         %% Receive tender from BM
+        on (rwitness_key(BM) & receive(BM,?Message)) : {
+           %% the Portal delegates the signature verification 
+           %% of the received tender to the SS
+          send(SS,scrypt(symmetricKey(SS,Actor), archiving_request.BM.Message));
+          select {
+            on (receive(SS,scrypt(symmetricKey(SS,Actor), 
+                    valid_signature.Message))
+                  & Message=upload_tender.?Tender.sign(?,?Tender)) :{
+           %% the case where the signature was validated by the SS
+
+              rwitness_tender;
+              send(SS,scrypt(symmetricKey(SS,Actor),
+                       timestamp_request.receipt(Tender)));
+           %% the BP waits for the signed receipt
+              receive(SS,scrypt(symmetricKey(SS,Actor), 
+                       timestamped(TS,?Time,signed(SS,receipt(Tender)))));
+              send(BM, timestamped(TS,Time,signed(SS,receipt(Tender))));
+          }}
+        }% End on
+      }%% End select
+    }%% End while saying that we still wait for 
+     %% the keys of BM and TC and for the tender of BM
+
+
+  %% '''''''' Submission phase - BidPortal
+
+    new SubmissionTimer;   
+     %% initialization of sets Applications, 
+     %% Applications2, and of nat Bidder_number
+    Applications := {};
+    Applications2 := {};
+    Bidder_number := fresh();
+
+    while (submission_phase_open) {
+      select {
+
+         %% 1- He waits for the submission request of one bidder 
+         %% and sends the application form 
+        on (receive(?Bidder,submission_request(?Bidder))) : { 
+	  
+	  %% fact for authentication between BP and the bidder concerning the submission request
+	  request_auth(Bidder,Actor,submission_request(Bidder));
+
+          send(SS,scrypt(symmetricKey(SS,Actor),
+                   signature_request.Bidder.application_form(Tender,Puk_BM,Puk_TC)));
+          receive(SS,scrypt(symmetricKey(SS,Actor),
+                   signed(SS,Bidder.application_form(Tender,Puk_BM,Puk_TC))));
+          send(Bidder,signed(SS,Bidder.application_form(Tender,Puk_BM,Puk_TC)));
+        } %% End on: the case we treat a submission request of a bidder
+
+         %% 2- He waits for the upload of one bidder
+         %% He verifies signatures (via SS), he generates a receipt
+         %% of this submission, and waits for the signed receipt     
+        on (receive(?Bidder,?Message)) : { 
+           %% we test if applications already include an entry for the current Bidder
+          if (!(Applications->contains((Bidder,?,?,?,?Num)))) {	  
+              %% sends the three signatures to SS in order to verify them
+             send(SS,scrypt(symmetricKey(SS,Actor),archiving_request.Bidder.Message));
+
+              %% waits for a message of SS saying that the three signatures are ok, 
+              %% only in this case that the execution can go on
+             select {
+               on (receive(SS,scrypt(symmetricKey(SS,Actor), valid_signature.Message))
+                    & (Message=?EncTender.sign(?,?).
+                               ?EncFP.sign(?,?).?EncTP.sign(?,?))) : {
+
+		  %%fact for non repudiation of the tender of the bidder
+		    request_non_repudiation(Actor,Bidder,Message);
+
+
+		  %% fact for integrity
+		    add_offer(Actor,SS,Message,Bidder);	
+
+                            %%this condition is used to fill Applications set
+                  %% The BidPortal generates a receipt of the submission 
+                  %% and send it to the SS in order to timestamp it		  
+                 send(SS,scrypt(symmetricKey(SS,Actor),
+                                timestamp_request.receipt(Message)));
+                  %% the BP waits for the signed receipt
+                 receive(SS,scrypt(symmetricKey(SS,Actor), 
+                        timestamped(TS,?Time,signed(SS,receipt(Message)))));
+                 send(Bidder, timestamped(TS,Time,signed(SS,receipt(Message))));
+                  %% in order to fill the internal sets : Applications 
+                  %% and Application we match the message Message with a message
+                  %% of the form message.sign.message.sign.message.sign 
+                  %% without detailing the signs messages
+                 Bidder_number:=succ(Bidder_number);
+                 Applications->add((Bidder,EncTender,EncFP,EncTP,Bidder_number));
+                 Applications2->add((Bidder,EncTender));
+            }}%%End on and select
+          } %% End If
+        } %% End on: the case we treat an upload of one bidder
+      }%%End select
+    }%%End while saying that we are in the submission phase
+
+
+  %% At this stage, the phase of submission is closed; 
+  %% the evaluation phase can start  
+
+
+  %% '''''''' Evaluation phase - BidPortal
+  
+     %% The BidManager asks for the list of applications 
+    receive(BM, candidates_download_request(BM));
+     %% Initialization of the message 
+    while (Applications2->contains((?Bidder,?EncTender))) {
+       %% the composition of the list of application to sent to BM : Candidates_message
+      Candidates_message:=Candidates_message.Bidder.EncTender;
+      Applications2->remove((Bidder,EncTender));
+    }
+    Candidates_message:=Candidates_message.ended;
+    send(SS,scrypt(symmetricKey(SS,Actor),signature_request.Candidates_message));
+    receive(SS,scrypt(symmetricKey(SS,Actor),signed(SS,Candidates_message)));
+     %% The next if prevent the process from continuing if there is no tender sent by a bidder
+    if (Applications->contains((?Bidder,?EncTender,?EncFP,?EncTP,?Bidder_number))) { 
+      send(BM,signed(SS,Candidates_message));
+    }
+     %% upload the list of eligible candidates
+    receive(BM,?Message_Eligible_Candidates); 
+     %% the awaited message normally is signed(BM,?Eligible_candidates) 
+     %% sends the Message to SS in order to verify it
+    send(SS,scrypt(symmetricKey(SS,Actor),
+            signature_validation_request.BM.Message_Eligible_Candidates));
+     %% waits for a message of SS saying that the the signature is ok, 
+     %% only in this case that the execution can go on
+    select {
+      on (receive(SS,scrypt(symmetricKey(SS,Actor), 
+              valid_signature.Message_Eligible_Candidates))
+            & (Message_Eligible_Candidates=?Eligible_candidates.sign(?,?))) : {
+               %%take the first element without verifying the signature
+         %% The BidPortal generates a receipt of the eligible candidates 
+         %% and send it to the SS in order to timestamp it
+        send(SS,scrypt(symmetricKey(SS,Actor),
+              timestamp_request.receipt(Message_Eligible_Candidates)));
+         %% the BP waits for the signed receipt
+        receive(SS,scrypt(symmetricKey(SS,Actor), 
+              timestamped(TS,?Time,signed(SS,
+              receipt(Message_Eligible_Candidates)))));
+        send(BM, timestamped(TS,Time,signed(SS,
+              receipt(Message_Eligible_Candidates))));
+        get_eligible_candidates;
+    }}%% End of on and select related to the signature validation 
+      %% of the upload of eligible candidates
+
+     %% if the first part of the evaluation was done with success
+   if (get_eligible_candidates) { 
+    receive(TC, technical_proposals_download_request(TC));
+    while (Eligible_candidates=?Bidder.?Sequence) {
+      if (Applications->contains((Bidder,?,?,?EncTP,?Bidder_number))) {
+        Eligible_technical_proposals:=Eligible_technical_proposals.Bidder_number.EncTP;
+      }
+      Eligible_candidates:=Sequence;
+    }%% End of while
+    Eligible_technical_proposals:=Eligible_technical_proposals.ended;
+    send(SS,scrypt(symmetricKey(SS,Actor),
+           signature_request.Eligible_technical_proposals));
+    receive(SS,scrypt(symmetricKey(SS,Actor),
+           signed(SS,Eligible_technical_proposals)));
+    send(TC,signed(SS,Eligible_technical_proposals));
+    receive(TC,?Msg_T_Report); %% upload signed reports
+		%% Msg_T_Report = signed(TC,?Technical_reports))
+     %% sends the Message to SS in order to verify it
+    send(SS,scrypt(symmetricKey(SS,Actor),
+           signature_validation_request.TC.Msg_T_Report));
+     %% waits for a message of SS saying that the the signature is ok, 
+     %% only in this case that the execution can go on
+    select {
+      on (receive(SS,scrypt(symmetricKey(SS,Actor),
+              valid_signature.Msg_T_Report))
+	    & (Msg_T_Report=Technical_reports.sign(?,?))) : {
+         %% The BidPortal generates a receipt of the technical report 
+         %% and send it to the SS in order to timestamp it
+        send(SS,scrypt(symmetricKey(SS,Actor),
+                timestamp_request.receipt(Technical_reports)));
+         %% the BP waits for the signed receipt
+        receive(SS,scrypt(symmetricKey(SS,Actor), 
+              timestamped(TS,?Time,signed(SS,receipt(Technical_reports))))); 
+	send(TC, timestamped(TS,Time,signed(SS,receipt(Technical_reports))));
+	ok_evaluation;
+    }}%% End of on and select related to the signature validation 
+      %% of the upload of signed reports
+   } %%End of second part of evaluation and then of the phase of evaluation
+
+
+   %% '''''''' Decision phase - BidPortal
+
+   if (ok_evaluation) {
+    receive(BM,reports_download_request);
+    while (Technical_reports=?Bidder_number.?Report.?Sequence) {
+      if (Applications->contains((?Bidder,?,?EncFP,?,Bidder_number))) {
+         Financial_and_reports:=Financial_and_reports.Bidder.EncFP.Report;
+       Technical_reports:=Sequence;
+      }
+    }
+    Financial_and_reports:=Financial_and_reports.ended;
+    send(SS,scrypt(symmetricKey(SS,Actor),signature_request.Financial_and_reports));
+    receive(SS,scrypt(symmetricKey(SS,Actor),signed(SS,Financial_and_reports)));
+    send(BM,signed(SS,Financial_and_reports));
+    receive(BM,?Msg_Result);
+     %% Msg_Result = signed(BM,?Result)
+     %% sends the Message to SS in order to verify it
+    send(SS,scrypt(symmetricKey(SS,Actor),archiving_request.BM.Msg_Result));
+     %% waits for a message of SS saying that the the signature is ok, 
+     %% only in this case that the execution can go on
+    select {
+      on (receive(SS,scrypt(symmetricKey(SS,Actor), 
+              valid_signature.Msg_Result))
+            & (Msg_Result=?Result.sign(?,?))) : {
+
+         %% The BidPortal generates a receipt of the technical report 
+         %% and send it to the SS in order to timestamp it
+        send(SS,scrypt(symmetricKey(SS,Actor),timestamp_request.receipt(Result)));
+         %% the BP waits for the signed receipt
+        receive(SS,scrypt(symmetricKey(SS,Actor), 
+              timestamped(TS,?Time,signed(SS,receipt(Result)))));
+        send(BM, timestamped(TS,Time,signed(SS,receipt(Result))));
+        ok_decision;
+    }} %% End of on and select related to the signature validation 
+       %% of the signed reports upload
+   } %%End of decision phase
+
+   %% Announcement
+   if (ok_decision) {
+    announcement_phase_on;
+   
+    while (announcement_phase_on) {
+      receive(?Bidder,winner_request);
+      send (Bidder,Msg_Result);
+    }
+   } %%End of if related to the end of the announcement phase
+
+  } %%End Body BidPortal
+ }%% End entity BidPortal
+
+
+%% ---------------------------------------------Bidder
+
+ entity Bidder(Actor, BP: agent) {
+ 
+
+ symbols   
+
+    Tender, FP, TP : doc;
+    Puk_BM, Puk_TC, Puk_BP : public_key;
+    SS, TS, BM : agent;
+    Winner : agent;
+    Time : date;
+   
+
+  body {
+
+   %% '''''''' Submission phase - Bidder
+
+    send(BP, submission_request(Actor));	
+    %% fact for authentication between BP and the bidder
+    witness_auth(Actor,BP,submission_request(Actor));
+
+     %% The Bidder waits for the application form from BP
+    receive(BP,signed(SS,Actor.application_form(?Tender,?Puk_BM,?Puk_TC)));
+    FP := fresh();
+    TP := fresh();
+     %% The Bidder sends his technical proposal, 
+     %% financial proposal and the application form
+    send(BP,application(Actor,crypt(Puk_BM,Tender),crypt(Puk_BM,FP),
+             crypt(Puk_TC,TP)));  
+     %% secrecy of offers
+    secrecy_goal secret_TP : Actor, tc: TP;
+    secrecy_goal secret_FP : Actor, bm: FP;
+     %% fact for integrity
+    offer(Actor,(crypt(Puk_BM,Tender).crypt(Puk_BM,FP).crypt(Puk_TC,TP)));
+     %% fact for non repudiation of the tender of a bidder
+    witness_non_repudiation(Actor,BP,application(Actor,crypt(Puk_BM,Tender),
+                                         crypt(Puk_BM,FP),crypt(Puk_TC,TP)));
+     %% The bidder waits for the receipt of his submission 
+    receive(BP,timestamped(?TS,?Time,signed(?SS,
+                  receipt(application(Actor,crypt(Puk_BM,Tender),crypt(Puk_BM,FP),
+                  crypt(Puk_TC,TP))))));
+   
+
+   %% '''''''' Decision phase - Bidder
+    send(BP,winner_request);
+    receive(BP,signed(BM,?Winner));
+%%    assert process_completed : false;
+             %% for executability testing
+
+  } %% End Body Bidder
+ }%% End entity Bidder
+
+
+%% ---------------------------------------------SecurityServer
+
+entity SecurityServer (Actor, BP, TS, Ar: agent) {
+
+
+  symbols
+    Message, Message2 : message;
+    Uncrypted_message : message;
+    EncrTender, EncrFP, EncrTP : message;
+    Time : date;
+
+    Agent1 : agent; 
+
+	
+  body {
+
+    while (true) {
+      select {
+ 
+        %% A signature is required
+       on (receive(BP,scrypt(symmetricKey(Actor,BP),
+               signature_request.?Message))) : {
+         send(BP,scrypt(symmetricKey(Actor,BP),signed(Actor,Message)));
+       }
+   
+        %% Only a timestamp is required
+       on (receive(BP,scrypt(symmetricKey(Actor,BP),
+               timestamp_request.?Message))) : {
+         send(TS,scrypt(symmetricKey(Actor,TS),signed(Actor,Message)));
+         receive(TS,scrypt(symmetricKey(Actor,TS),
+                 timestamped(TS,?Time,signed(Actor,Message))));
+         send(BP,scrypt(symmetricKey(Actor,BP),
+                 timestamped(TS,Time,signed(Actor,Message))));
+       }
+	
+        %% Only a simple signature validation of a simple message is required
+       on (receive(BP,scrypt(symmetricKey(Actor,BP),
+               signature_validation_request.?Agent1.signed(?Agent1,?Message)))) : {
+         send(BP,scrypt(symmetricKey(Actor,BP),valid_signature.signed(Agent1,Message)));
+       }
+
+        %% Timestamp, signature validation and archiving are required
+       on (receive(BP,scrypt(symmetricKey(Actor,BP),
+               archiving_request.?Agent1.signed(?Agent1,?Message)))) : {
+              %% the case where the Portal delegates the signature verification 
+              %% of the tender received to the SS saying to the BP 
+              %% that the signature of the message received is ok
+             send(BP,scrypt(symmetricKey(Actor,BP),
+                            valid_signature.signed(Agent1,Message)));
+              %% it is not necessary to treat the case of the case of else
+              %% the execution can not go on 
+             send(TS,scrypt(symmetricKey(Actor,TS),signed(Agent1,Message)));
+             receive(TS,scrypt(symmetricKey(Actor,TS),
+                       timestamped(TS,?Time,signed(Agent1,Message))));
+             send(Ar,scrypt(symmetricKey(Actor,Ar),
+                            timestamped(TS,Time,signed(Agent1,Message))));		
+             receive(Ar,scrypt(symmetricKey(Actor,Ar),
+                               acknowledgement(signed(Agent1,Message))));
+       }
+        %% The same one, for the case of the application document
+       on (receive(BP,scrypt(symmetricKey(Actor,BP),
+                  archiving_request.?Agent1.
+                             application(?Agent1,?EncrTender,?EncrFP,?EncrTP)))) : {
+              %% the case where the Portal delegates the signature verification 
+              %% of the tender received to the SS saying to the BP 
+              %% that the signature of the message received is ok
+             send(BP,scrypt(symmetricKey(Actor,BP),
+                     valid_signature.application(Agent1,EncrTender,EncrFP,EncrTP)));
+              %% it is not necessary to treat the case of the case of else
+              %% the execution can not go on 
+             send(TS,scrypt(symmetricKey(Actor,TS),
+                            application(Agent1,EncrTender,EncrFP,EncrTP)));
+             receive(TS,scrypt(symmetricKey(Actor,TS),
+                       timestamped(TS,?Time,
+                                   application(Agent1,EncrTender,EncrFP,EncrTP))));
+             send(Ar,scrypt(symmetricKey(Actor,Ar),
+                     timestamped(TS,Time,application(Agent1,EncrTender,EncrFP,EncrTP))));		
+             receive(Ar,scrypt(symmetricKey(Actor,Ar),
+                        acknowledgement(application(Agent1,EncrTender,EncrFP,EncrTP))));
+
+	     %% fact for integrity
+	     offer_added(Actor,BP,application(Agent1,EncrTender,EncrFP,EncrTP),Agent1);
+       }
+      }%% End select
+    }%% End while
+
+  }%End body
+ }%% End entity SecurityServer
+
+
+%% ---------------------------------------------TimeStamper
+
+  entity TimeStamper (Actor, SS :agent) {
+
+
+  symbols
+
+    Message_to_timestamp : message;
+    Time : date;
+
+
+  body {
+
+    while (true) {
+      receive(SS,scrypt(symmetricKey(SS,Actor),
+               ?Message_to_timestamp));
+      Time := fresh();
+      send(SS,scrypt(symmetricKey(SS,Actor),
+               timestamped(Actor,Time,Message_to_timestamp)));
+    }
+
+  }%%End body
+ }%%End entity TimeStamp
+
+
+%% ---------------------------------------------Archiver
+
+  entity Archiver (Actor, SS: agent) {
+
+
+  symbols
+
+    Proof_record : message set;
+    Message_to_archive : message;
+
+
+  body{
+
+    while (true) {
+      receive(SS,scrypt(symmetricKey(SS,Actor),?Message_to_archive));
+      Proof_record->add(Message_to_archive);
+      send(SS,scrypt(symmetricKey(SS,Actor),
+               acknowledgement(Message_to_archive)));
+    }
+
+  }%%End body
+ }%%End entity Archiver
+
+
+%% ///////////////////////////////////////////////////////////////ENVIRONNEMENT BODY
+
+ body {
+  new BidPortal(bp,bm,tc,ss);
+  new TechnicalCommittee(tc,bp);
+  new SecurityServer(ss,bp,ts,ar);
+  new TimeStamper(ts,ss);
+  new Archiver(ar,ss);
+   %%---Bidders
+  new Bidder(alice,bp);
+  new Bidder(bob,bp);
+  new Bidder(eve,bp);
+   %% The Bid Manager : we also give him 
+   %% the list of eligible bidders
+  new BidManager(bm,bp,{alice,bob});
+
+ }
+
+
+%% ///////////////////////////////////////////////////////////////GOALS
+
+ goals
+
+%% OK-non-repudiation
+%% if the entity B owns the message M : 
+%% which is a signed msg or application (that is 
+%% a concatenation of three signed messages) by A
+%% then, some time in the past, A  has built and sent this message to B
+  S2: 
+  forall A B M. 
+  [](request_non_repudiation(B,A,M) 
+  => <-> (witness_non_repudiation(A,B,M))
+  );
+
+%% OK-integrity
+  S3:
+  forall SS BP B T PF PT. 
+  [] ((offer_added(SS,BP,signed(B,T).signed(B,PF).signed(B,PT),B))
+  => <->((add_offer(BP,SS,signed(B,T).signed(B,PF).signed(B,PT),B)) 
+      & (<->(offer(B,T.PF.PT))))
+  );
+%% OK_authentication
+  S4: 
+  forall A B M. 
+  [] (request_auth(A,B,M)
+  => <->(witness_auth(A,B,M))
+  );
+
+} %% End entity Environment

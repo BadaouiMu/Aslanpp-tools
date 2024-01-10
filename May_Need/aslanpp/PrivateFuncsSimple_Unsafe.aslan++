@@ -1,0 +1,16 @@
+% TESTED FEATURES: private functions
+% EXPECTED OUTCOME: Unsafe
+specification PrivateFuncsSimple_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+	    a: agent;
+	    my_fnc(message) : message; % public
+	    token : message;
+
+	goals
+	    g : [](!iknows(my_fnc(token)));
+            % note that this should fail because i should know my_fnc!
+}

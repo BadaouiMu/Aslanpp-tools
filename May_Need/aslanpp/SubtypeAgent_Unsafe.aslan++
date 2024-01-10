@@ -1,0 +1,33 @@
+specification SubtypeAgent_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  types
+    agent1 < agent;
+  symbols
+    a0: public_key; % according to updated prelude, public_key < agent.
+    A: agent;
+    a1,a2: agent1;
+    A1: agent;
+    A2: agent1;
+    M,N: message;
+    t1,t2:text;
+  macros
+    signed_message (M,T,A) = (M.T).sign(inv(pk(A)),M.T);
+
+  body {
+    iknows(i.signed_message(signed_message(i,t1,a1),t2,a2));
+      select {
+        on (?A = a0 
+            & ?A2 -> Actor: ?N 
+            & ?M = signed_message(?,?,?A1)
+            & ?N = i.signed_message(?M,?,?A2) 
+           ): % should allow unification
+        {
+          assert reached: !(A = a0);
+        }
+      }
+  }
+}
+

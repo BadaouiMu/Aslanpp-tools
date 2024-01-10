@@ -1,0 +1,61 @@
+specification NSPK_Lowe
+channel_model CCM 
+
+entity Environment {
+
+  entity Session (A, B: agent) {
+
+    entity Alice (Actor, B: agent) {
+
+      symbols
+        Na, Nb: text;
+
+      body {
+        Na := fresh();
+       secrecy_goal secret_Na: Actor,B: Na;
+        Actor  ->  B: {Na.Actor}_pk(B);
+        B  ->  Actor: {Na.?Nb.B}_pk(Actor);
+       channel_goal Bob_Alice_Na:
+        B *->> Actor: Na;
+       secrecy_goal secret_Nb: B,Actor: Nb;
+        Actor  ->  B: {Nb}_pk(B);
+       channel_goal Alice_Bob_Nb:
+        Actor *->> B: Nb;
+      }
+    }
+
+    entity Bob (Actor: agent) {
+
+      symbols
+        A: agent;
+        Na, Nb: text;
+
+      body {
+        ? -> Actor: {?Na.?A}_pk(Actor);
+        Nb := fresh();
+       secrecy_goal secret_Nb: A,Actor: Nb;
+        Actor  ->  A: {Na.Nb.Actor}_pk(A);
+       channel_goal Bob_Alice_Na:
+        Actor *->> A: Na;
+
+        A -> Actor: {Nb}_pk(Actor);
+       channel_goal Alice_Bob_Nb:
+        A *->> Actor: Nb;
+       secrecy_goal secret_Na: A,Actor: Na; % when this goal is put any earlier, 
+                                            % a spurious attack with uninstantiated A occurs,
+                                            % because A has not yet been authenticated earlier.
+      }
+    }
+
+    body {
+      new Alice(A,B);
+      new Bob(B);
+    }
+  }
+
+  body {
+    any A B. Session(A,B) where A!=B;
+    any A B. Session(A,B) where A!=B;
+  }
+}
+

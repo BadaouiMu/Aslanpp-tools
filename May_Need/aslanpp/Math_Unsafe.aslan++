@@ -1,0 +1,61 @@
+% TESTED FEATURES: select, channels
+% EXPECTED OUTCOME: Unsafe
+specification Math_Unsafe
+channel_model CCM
+
+entity Math {
+       
+       types
+	      operator < text;
+
+       symbols
+	      nonpublic app(operator, message) : text;
+	      nonpublic plus, square : operator;
+	      adder, squarer, client : agent;
+	      finished : fact;
+
+       entity Adder(Actor, Partner : agent, Plus : operator) {
+
+	      symbols
+		NA, NB : text;
+
+	      body {
+	      	   select {
+	      	   on (receive(?Partner, ?NA.?NB)) :
+		      send(Partner, app(Plus, NA.NB));
+		   }
+	      }
+       }
+
+       entity Squarer(Actor, Partner : agent, Square : operator) {
+
+       	      symbols
+		NA : text;
+
+	      body {
+	      	   select {
+		   on (receive(Partner, ?NA)) :
+		      send(Partner, app(Square, NA));
+		   }
+	      }
+       }
+
+       entity Client(Actor, Adder, Squarer : agent, Plus, Square : operator) {
+       	      symbols
+		   NA, NB : text;	
+
+	      body {
+		   NA := fresh();
+		   NB := fresh();
+	      	   send(Adder, NA.NB);
+		   receive(Squarer, app(Square, app(Plus, NA.NB)));
+		   assert finished: false;
+	      }
+       }
+
+       body {
+       	    new Adder(adder, squarer, plus);
+	    new Squarer(squarer, client, square);
+	    new Client(client, adder, squarer, plus, square);
+       }
+}

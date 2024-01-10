@@ -1,0 +1,28 @@
+specification SymbSessionGen_Safe
+channel_model CCM
+
+entity Environment {
+
+  entity Session (A, B: agent) {
+
+    entity Alice (Actor, B: agent) {
+      body {
+        assert Alice_not_Bob: Actor!=B; %% how is this achieved in the second session?
+      }
+    }
+
+    entity Bob (A, Actor: agent) {
+    }
+
+    body {
+      new Alice(A,B);
+      new Bob  (A,B);
+    }
+  }
+
+  body {
+    any A B. Session(A,B) where A!=B;
+    any Actor B. Session(Actor,B) where !dishonest(Actor) & i *-> Actor : B & Actor!=B; 
+              % nice that receive action is possible here, but better not produce iknows(...) on the RHS
+  }
+}

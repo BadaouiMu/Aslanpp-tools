@@ -1,0 +1,56 @@
+specification NSPK 
+channel_model CCM 
+
+entity Environment {
+
+  entity Session (A, B: agent) {
+
+    entity Alice (Actor, B: agent) {
+
+      symbols
+        Na, Nb: text;
+
+      body {
+        secret_Na:(Na) := fresh();
+        Actor  ->  B: {Na.Actor}_pk(B);
+        B  ->  Actor: {Alice_authenticates_Bob:(Na).
+                                    secret_Nb:(?Nb)}_pk(Actor);
+        Actor  ->  B: {Bob_authenticates_Alice:(Nb)}_pk(B);
+      }
+    }
+
+    entity Bob (A, Actor: agent) {
+
+      symbols
+        Na, Nb: text;
+
+      body {
+        ? -> Actor: {?Na.?A}_pk(Actor); % Bob learns A here!
+        secret_Nb:(Nb) := fresh();
+        Actor  ->  A: {Alice_authenticates_Bob:(Na).Nb}_pk(A);
+        A  ->  Actor: {Bob_authenticates_Alice:(Nb)}_pk(Actor);
+        secret_Na:(Na) := Na;   % Goal can only be given here,
+            % because A certainly is not authenticated before!
+      }
+    }
+
+    body { % of Session
+      new Alice(A,B);
+      new Bob  (A,B);
+    }
+    
+    goals
+     %secret_Na:(_) {A,B};          % Okay. 
+     %secret_Nb:(_) {A,B};          % Attack found!
+     %%% Commented out the above goals such that
+     %%% the attack is printed on authentiation.
+      Alice_authenticates_Bob:(_) B *->> A; % Okay.
+      Bob_authenticates_Alice:(_) A *->> B; % Attack found!
+  } 
+
+  body { % of Environment
+  % Two sessions needed for Lowe's attack.
+    any A B. Session(A,B) where A!=B;
+    any A B. Session(A,B) where A!=B;
+  }
+}

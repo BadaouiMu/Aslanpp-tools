@@ -1,0 +1,38 @@
+% TESTED FEATURES: crypt shorthand, sign shorthand
+% EXPECTED OUTCOME: Unsafe
+specification CryptSign_Unsafe
+channel_model CCM
+
+entity Env
+{
+    symbols
+        alice, bob : agent;
+        accepted(agent, agent, message) : fact;
+        token : message;
+ 
+    entity Alice(Actor, B : agent)
+    {
+	body {
+	    Actor -> B : {{token}_inv(pk(Actor))}_pk(B);
+        }
+    }
+
+    entity Bob(Actor, A : agent)
+    {
+        symbols
+            M : message;
+
+        body {
+            A -> Actor : {{?M}_inv(pk(A))}_pk(Actor);
+            accepted(Actor, A, M);
+        }
+    }
+
+    body {
+        new Alice(alice, bob);
+        new Bob(bob, alice);
+    }
+
+    goals
+        g : [](!exists A1 A2 M . accepted(A1, A2, M));
+}

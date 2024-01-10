@@ -1,0 +1,69 @@
+specification ScopingMacros_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  symbols
+    a1, a2, b: agent;
+
+  entity Session (A, B: agent) {
+
+    entity Alice (Actor, B: agent) { % outer Alice
+      clauses
+        clash: iknows(clash);
+      symbols
+	clash: message;
+      macros
+        clash=clash;
+        clash2=i;
+
+      entity Alice (Actor: agent) { % inner Alice; note the same entity name as the defining one
+
+        clauses
+          clash: iknows(clash);
+        symbols
+	  clash: message;
+        macros
+          clash=clash;
+          clash2=i.i; %% better give warning! E.g.:  Macro 'clash2' from entity 'E_S_A_Alice' hides a symbol with the same name defined in an ancestor entity.
+
+        body {
+	  iknows(clash);
+          Actor *-> b: i; % just an authentic signal to B.
+        }
+      }
+
+      body {
+        new Alice(a2); % instantiate inner Alice
+	iknows(clash);
+      }
+    }
+
+    entity Bob   (Actor, A: agent) {
+      clauses
+        clash: iknows(clash);
+      symbols
+	clash: agent; % this is an independent (non-nested) declaration of 'clash'
+      macros
+        clash=clash;
+        clash2(A)=A.A.A;
+        triple_i = clash2(i);
+
+      body {
+	iknows(clash);
+        A *-> Actor: i;
+        assert test_finished: triple_i != i.i.i; % testing nested macro expansion, should reach this point and yield 'attack'
+      }
+    }
+
+    body {
+      %iknows(clash); % if uncommented, translation error is correct: 'clash' is not visible here.
+
+      new Alice(A,B);
+      new Bob  (B,a2);
+    }
+  }
+
+  body
+    new Session(a1,b);
+}

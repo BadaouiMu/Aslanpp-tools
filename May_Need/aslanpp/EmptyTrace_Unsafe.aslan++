@@ -1,0 +1,15 @@
+specification EmptyTrace_Unsafe
+channel_model CCM
+
+% OFMC shows bug
+
+entity Environment {
+
+  symbols
+    is_zero(nat): fact;
+  clauses
+    is_zero_0: is_zero(0);
+  goals
+    initial_state_attack: forall X . [](is_zero(X) => X!=0);
+}
+

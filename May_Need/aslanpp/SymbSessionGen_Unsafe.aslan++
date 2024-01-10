@@ -1,0 +1,57 @@
+specification SymbSessionGen_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  symbols
+    finished(agent, nat, nat): fact;
+    A1, B1, A2, B2: agent;
+
+  entity Session (A, B: agent, Id: nat) {
+
+    entity Alice (Actor, B: agent, Id: nat) {
+      body {
+        finished(Actor, 1, Id);
+      }
+    }
+
+    entity Bob   (A, Actor: agent, Id: nat) {
+      body {
+        finished(Actor, 2, Id);
+      }
+    }
+
+    body {
+      assert session_parameters_iknown_and_distinct: 
+        %%iknows(A) & iknows(B) &  %%commented out because of translator bug
+        A!=B; % this must hold!
+      new Alice(A,B,Id);
+      new Bob  (A,B,Id);
+    }
+  }
+
+  body {
+    any A B. Session(A,B,1) where A!=B;
+    any A B. Session(A,B,2) where A!=B;
+    select {
+      on( % wait until all four Alice/Bob instances are finished ...
+         finished(?A1,1,1) & finished(?B1,2,1)
+       & finished(?A2,1,2) & finished(?B2,2,2)
+       % ... and until a certain part of the agent names are different,
+       % representing one of the symbolic instantiations to be checked:
+       & ?A1 != ?B1 % must hold by the "where" clause
+       & ?A2 != ?B2 % must hold by the "where" clause
+       & ?A1 != ?B2 % example inequality
+       & ?A2 != ?B1 % example inequality
+       & ?A1  = ?A2 % example equality
+       & ?B1 != ?B2 % example inequality
+        ): {
+        % 'attack found' indicates that the intended instantiation has happend!
+        assert all_sessions_finished: false 
+                                % just to get the agent names printed:
+                                & !finished(A1,1,1) & !finished(B1,2,1)
+                                & !finished(A2,1,2) & !finished(B2,2,2);
+      }
+    }
+  }
+}

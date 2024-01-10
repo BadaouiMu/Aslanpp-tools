@@ -1,0 +1,62 @@
+% TESTED FEATURES: channels, while, if
+% EXPECTED OUTCOME: Unsafe
+specification Channels_Unsafe
+channel_model CCM
+
+entity Environment
+{
+	symbols
+		alice, bob, cooper : agent;
+		token : message;
+		knows(agent, message) : fact;
+
+	entity Listener(Actor : agent)
+	{
+		symbols 
+			T : message;
+
+		body
+		{
+			% Whatever the Actor receives will
+			% become known by the Actor.
+			while (true)
+			{
+			      ? *->* Actor : ?T;
+			      knows(Actor, T);
+			}
+		}
+	}
+
+	entity Session(Actor, Partner : agent)
+	{
+		symbols
+			T : message;
+
+		body
+		{
+			% Whatever the Actor knows will
+			% be sent to the Partner.
+			while (true)
+			{
+			      if (knows(Actor, ?T))
+			            Actor *->* Partner : T;
+			}
+		}
+	}
+
+	body
+	{
+		new Listener(alice);
+		new Listener(bob);
+		new Listener(cooper);
+		new Session(alice, bob);
+		new Session(bob, cooper);
+
+		% The Environment sends a token to Alice.
+		Actor *->* alice : token;
+	}
+
+	goals
+		% cooper should never know about the token.
+		cooper_does_not_find_out : [](!knows(cooper, token));
+}

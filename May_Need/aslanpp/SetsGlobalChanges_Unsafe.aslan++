@@ -1,0 +1,45 @@
+% TESTED FEATURES: remotely change a set passed by reference
+% EXPECTED OUTCOME: Unsafe
+specification SetsGlobalChanges_Unsafe
+channel_model CCM
+
+entity Environment
+{
+  types
+    elem < message;
+  symbols 
+    a, b : agent;
+    elem1: elem;
+    elem2: elem;
+    setwrap(elem set): message;
+    finished: text;
+
+  entity Alice(Actor, B : agent) {
+    symbols
+      GlobalSet: elem set;
+    body {
+      GlobalSet := {elem1,elem2};
+      Actor ->* B: setwrap(GlobalSet); % Set sent confidentially such that Cl-AtSe's intruder cannot manipulate it
+      select {
+        on(B *-> Actor: finished): {
+          assert NOT_elem2_has_been_removed: GlobalSet->contains(elem2);
+        }
+      }
+    }
+  }
+
+  entity Bob(A, Actor : agent) {
+    symbols
+      GlobalSet: elem set;
+    body {
+      A ->* Actor : setwrap(?GlobalSet);
+      GlobalSet->remove(elem2);
+      Actor *-> A: finished;
+    }
+  }
+
+  body {
+    new Alice(a, b);
+    new Bob  (a, b);
+  }
+}

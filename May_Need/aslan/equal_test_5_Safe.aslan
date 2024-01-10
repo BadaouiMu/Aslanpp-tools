@@ -1,0 +1,36 @@
+section signature:
+	state_Environment : agent * nat * nat * agent * agent -> fact
+	myfact : agent -> fact
+	store : agent -> fact
+	f : agent -> agent
+	finished : nat -> fact
+
+section types:
+	Actor : agent
+	IID : nat
+	X, Z : agent
+	a,b : agent
+
+section inits:
+
+initial_state init :=
+	iknows(i).
+	myfact(f(a)).
+	state_Environment(b, 0, 1, a, a)
+
+section hornClauses:
+
+section rules:
+
+step step_001_Environment__line_11(Actor, IID, X, Z) :=
+	not(myfact(X)).equal(X,f(a)).
+	state_Environment(Actor, IID, 1, a, a)
+	=>
+	finished(IID).
+	state_Environment(Actor, IID, 4, X, Z)
+
+
+section goals:
+
+goal finished(IID) :=
+        G(not(finished(IID)))

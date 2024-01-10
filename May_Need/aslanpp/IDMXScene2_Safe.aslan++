@@ -1,0 +1,595 @@
+% @verbatim(Formalization of the Anonymous Shopping case study)
+% @verbatim(IDMX Scene 2: A frequent customer system.)
+% @verbatim(In this specification a Wineshopper (Alice))
+% @verbatim(purchases some goods from an online Winery)
+% @verbatim(preventing to reveal to the Winery any unecessary)
+% @verbatim(information about herself. In this scene the)
+% @verbatim(Winery is member of a frequent customer system (FCS))
+% @verbatim(a sort of suppliers consortium. Every online winery)
+% @verbatim(being part of the system trusts the FCS and accepts)
+% @verbatim(all credentials issued by it. In this way the Wineshopper)
+% @verbatim(does not need to show several credentials at each store,)
+% @verbatim(which may have different policies i.e. requiring the)
+% @verbatim(Wineshopper to prove posession of credentials with different)
+% @verbatim(properties, for each purchase. It is sufficient to prove)
+% @verbatim(the possession of a credential issued by the FCS.)
+% @verbatim(%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%)
+% @verbatim(Security requirements classification:)
+% @verbatim(Privacy, Federation and Blind Signatures)
+% @verbatim(Expected outcome of validation: NO_ATTACK_FOUND)
+% @verbatim(For further details see Deliverables D5.{1,2,3})
+% @modeler(Sebastian M{\"o}dersheim, IBM Research, 2009)
+% @modeler(Marco Rocchetto, UniVr, 2010)
+% @modeler(Alberto Calvi, UniVr, 2010)
+% @satmc()
+% @ofmc(--classic --untyped)
+% @clatse()
+
+specification IDMXScene2_Safe channel_model CCM
+entity Environment{
+ 
+	import IDMXBase; 
+
+	types
+
+		order < message;
+
+	symbols
+	
+		%%%%%%%%%%%%%%%%%%%%%%
+		%% Constant symbols
+		
+		%% Agents names 
+		%% ws: Wineshopper (Alice)
+		%% w: online Winery
+		%% t: the trusted third party (Judge)
+		ws,w,t,fcs,bank: agent;
+	
+		%% Wineshopper's passports values, 
+		%% used in Env body to set a credential,
+		%% store it into Wineshoper's db
+		%% and then keeping trace of its
+		%% issuing in the issuer db 
+		NymIt: nym;
+		val1,val2,val3,val5: idmxval;
+		val4,val: message;
+		
+		%% Wineshopper's creditcard values, 
+		%% used in Env body to set a credential,
+		%% store it into Wineshoper's db
+		%% and then keeping trace of its
+		%% issuing in the issuer db 
+		NymBank: nym;
+		bval1,bval2,bval3: idmxval;
+		bval: message;
+		
+		%% the wine order made by Wineshopper
+		o: order;
+		
+		%% some costant symbols for 
+		%% credentials and Nyms initialization
+		x1,x2,x3,x4,x5,x6,x7,x8: nat;
+        
+		%%%%%%%%%%%%%%%%%%%%%%
+		%% Variable symbols
+		
+		%% Oecdgov set used in the body section
+		Oecdgov,CCBrands,FSet: agent set;
+
+		%% Variable declarations for "goals" section
+		
+		executabilityWS,executabilityFCS,executabilityW: fact;
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	%% the Wineshopper entity (Alice)
+	
+	entity Wineshopper(Actor, FCS, Winery, Judge: agent, Order: order){
+
+		symbols 
+
+			%% Variables declaration
+			
+			%% Channel Psudonym
+			P: chPsy;
+			
+			%% Random numbers for the IDMX pseudonyms
+			R_1,R_2,R_3,R_4: nat;
+			
+			%% Actor's (Wineshopper's) and credential issuer's IDMX Pseudonyms
+			Nym,NymI,NymBank,NymFcs,Nym2: nym;
+			
+			%% IDMX values and other information for
+			%% proofs and commitments
+			C,VE,Other,Serialnumber: message;
+			Surname,Prename,Username,Dateofbirth: idmxval;
+			
+			BSurname,BPrename,BExpDate,BNumber: idmxval;
+			BUsername: agent;
+			
+			Val1,Val2,Val3,Val4,Val5: idmxval;
+			
+			%% the agent names of the credential issuers
+			I,B: agent;
+			
+			FcsCred: credential;
+
+		body{
+
+ 			P := fresh();
+			
+			iknows(pk(P));
+			iknows(inv(pk(P)));
+			iknows(P);
+			
+			% 1. Pseudonym (Nym) creation
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+			R_1 := fresh();
+			C := commit(masec_(Actor),FCS,R_1);
+    
+			[Actor]_[P] *-> FCS: spk((masec_(Actor).R_1),C,commitproof,FCS); 
+    
+			FCS ->* [Actor]_[P]: ?R_2;
+			Nym := ptag(masec_(Actor),FCS,R_1,R_2);
+
+			add(db(Actor),isnym.Nym.FCS);
+
+			[Actor]_[P] *-> FCS: spk((masec_(Actor).R_1),Nym,ptagproof,FCS);
+     
+			% 2. Take a fitting passport:
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			
+			select {
+			
+				on ( 
+					contains(db(Actor),credp.sign(inv(pk(?I)),
+					credential(?I,?NymI,?Surname.?Prename.?Username.?Dateofbirth.?Other)))
+					&
+					contains(db(Actor),cred.sign(inv(pk(?B)),
+					credential(?B,?NymBank,?BSurname.?BPrename.?BUsername.?BNumber.?BExpDate)))
+				):
+				{
+					% 3. Construct verifiable encryption:
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+					Val1 := blind(masec_(Actor),Surname);
+					Val2 := blind(masec_(Actor),Prename);
+					Val3 := blind(masec_(Actor),Username);
+					Val4 := blind(masec_(Actor),Dateofbirth);
+					Val5 := blind(masec_(Actor),BExpDate);
+
+					% Transmission of all proofs:
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				
+					[Actor]_[P] *-> FCS: spk(
+						sign(inv(pk(I)),credential(I,NymI,Surname.Prename.Username.Dateofbirth.Other)).
+						sign(inv(pk(B)),credential(B,NymBank,BSurname.BPrename.BUsername.BNumber.BExpDate)).
+							masec_(Actor),
+						Val1.Val2.Val3.Val4.Val5,
+						applicationproof,
+						FCS.Nym);
+						
+					FCS ->* [Actor]_[P]: sign(inv(pk(?FCS)),
+					credential(?FCS,?NymFcs,Val1.Val2.Val3.Val4.Val5.?Serialnumber));
+
+					add(db(Actor),credFcs.sign(inv(pk(FCS)),
+					credential(FCS,NymFcs,Val1.Val2.Val3.Dateofbirth.BExpDate.Serialnumber)));
+					
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+					% Once the Whineshopper has received
+					% the credential from the Frequent 
+					% Customer System (s)he starts
+					% to communicate with the Winery
+					% in order to create a nym with 
+					% it and then order some goods
+										
+					% Pseudonym (Nym) creation
+					% with the winery
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+					
+					R_3 := fresh();
+					C := commit(masec_(Actor),Winery,R_3);
+					
+					[Actor]_[P] *-> Winery: spk((masec_(Actor).R_3),C,commitproof,Winery);
+					
+					Winery ->* [Actor]_[P]: ?R_4;
+					
+					Nym2 := ptag(masec_(Actor),Winery,R_3,R_4);
+					
+					add(db(Actor),isnym.Nym2.Winery);
+					
+					[Actor]_[P] *-> Winery: spk(masec_(Actor).R_3,Nym2,ptagproof,Winery);
+					
+					select { 
+						
+						on (
+							contains(db(Actor),credFcs.sign(inv(pk(FCS)),
+							credential(FCS,NymFcs,blind(masec_(Actor),Surname).blind(masec_(Actor),Prename).
+							blind(masec_(Actor),Username).Dateofbirth.BExpDate.Serialnumber)))
+						) :
+						{
+							FcsCred := credential(FCS,NymFcs,blind(masec_(Actor),Surname).
+								blind(masec_(Actor),Prename).blind(masec_(Actor),Username).Dateofbirth.BExpDate.
+								Serialnumber);
+							VE := crypt(pk(Judge), Surname.Prename.Username.Dateofbirth.Serialnumber);
+
+							% Transmission of all proofs and order:
+							%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+						
+							[Actor]_[P] *-> Winery: spk(sign(inv(pk(FCS)),FcsCred).
+								masec_(Actor), VE, proper, Winery.Order.VE);
+
+							add(db(Actor),ordered.Winery.Order);
+							executability4;
+						} %% on closure
+					} %% select closure
+
+					executabilityWS;
+				}  
+			} %% select closure
+			
+		} %% body closure
+	} %% end of Wineshopper entity
+	
+	entity FCS(Actor: agent, Oecdgov, CCBrands: agent set){
+
+		symbols 
+
+			%% Variables declaration
+			
+			%% Channel Psudonym
+			P: chPsy;
+			
+			%% Random numbers for the IDMX pseudonym
+			Z_R_1,R_2: nat;
+			Z_Masec: masec;
+			
+			%% Actor's (Wineshopper's) and credential issuer's IDMX Pseudonyms
+			Nym,NymI,NymBank: nym;
+			
+			%% IDMX values and other information for
+			%% proofs, credentials and commitments
+			Dateofbirth,Other: message;
+			Surname,Prename,Username: idmxval;
+			Val1,Val2,Val3,Val4,Val5: idmxval;
+			BSurname,BPrename,BNumber,BExpDate: idmxval;
+			BUsername: agent;
+			N1,N2: nat;
+			Serialnumber: message;
+			FcsCred: credential;
+			
+			%% the agent names of the credential issuers
+			I,B: agent;
+			
+
+		body{
+
+			% 1. Pseudonym (Nym) creation
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			[?]_[?P] *-> Actor: spk((?Z_Masec.?Z_R_1),commit(?Z_Masec,Actor,?Z_R_1),commitproof,Actor);
+			
+			R_2 := fresh();
+			Actor ->* [?]_[P]: R_2;
+			
+			[?]_[P] *-> Actor: spk((Z_Masec.Z_R_1),ptag(Z_Masec,Actor,Z_R_1,R_2),ptagproof,Actor);
+
+			Nym := ptag(Z_Masec,Actor,Z_R_1,R_2);
+
+			add(db(Actor),isnym.Nym);
+     
+			%% 2. The Winery receives the proof and checks it
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			[?]_[P] *-> Actor: spk(
+						sign(inv(pk(?I)),
+						credential(?I,?NymI,?Surname.?Prename.?Username.
+							mkval(?Dateofbirth,one.zero).?Other))
+						.sign(inv(pk(?B)),
+						credential(?B,?NymBank,?BSurname.?BPrename.?BUsername.?BNumber.?BExpDate)) 
+							.Z_Masec,
+						?Val1.?Val2.?Val3.?Val4.?Val5,
+						applicationproof,
+						Actor.Nym);
+
+			select{ 
+				
+				on ( contains(Oecdgov,I)
+					&
+					contains(CCBrands,B)
+				): 
+				{
+					
+					Serialnumber := fresh();
+					N1 := fresh();
+					N2 := fresh();
+					
+					FcsCred := credential(Actor,ptag(masec_(Actor), P, N1, N2),
+					Val1.Val2.Val3.Val4.Val5.Serialnumber);
+					add(db(Actor),issued.ptag(masec_(Actor), P, N1, N2).FcsCred);
+
+					Actor ->* [?]_[P]: sign(inv(pk(Actor)),FcsCred);
+
+					executabilityFCS;
+				}
+			} %% select closure
+		} %% body closure
+	} %% end of FCS entity
+	
+	
+	entity Winery(Actor, Judge: agent, FcsSet: agent set){
+
+		symbols 
+
+			%% Variables declaration
+			
+			%% Channel Psudonym of Wineshopper
+			P: chPsy;
+			
+			%% Random numbers for the Whinesopper's IDMX pseudonym
+			Z_R_3,R_4: nat;
+			
+			%% Actor's (Wineshopper's) and credential issuer's IDMX Pseudonyms
+			Nym: nym;
+			
+			%% IDMX values and other information for
+			%% proofs and commitments
+			Z_Masec: masec;
+			Order,Z_ExpDate,Z_Serialnumber,Z_Dateofbirth: message;
+			Z_Surname,Z_Prename: idmxval;
+			Z_Username: idmxval;
+			
+			%% agent names for credential issuers
+			FCS: agent;
+			Z_NymFcs: nym;
+
+		body{
+
+			% Pseudonym (Nym) creation
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+			[?]_[?P] *-> Actor: spk((?Z_Masec.?Z_R_3),commit(?Z_Masec,Actor,?Z_R_3),commitproof,Actor);
+
+			R_4 := fresh();
+
+			Actor ->* [?]_[P]: R_4;
+
+			[?]_[P] *-> Actor: spk((Z_Masec.Z_R_3),ptag(Z_Masec,Actor,Z_R_3,R_4),ptagproof,Actor);
+			
+			Nym := ptag(Z_Masec,Actor,Z_R_3,R_4);
+
+			add(db(Actor),isnym.Nym);
+			
+			
+			[?]_[P] *-> Actor:
+				spk(sign(inv(pk(?FCS)),
+					credential(?FCS,?Z_NymFcs,blind(Z_Masec, ?Z_Surname).blind(Z_Masec, ?Z_Prename).
+						blind(Z_Masec, ?Z_Username).mkval(?Z_Dateofbirth,one.zero).mkval(?Z_ExpDate,zero.one).
+						?Z_Serialnumber)).Z_Masec,
+					crypt(pk(Judge),?Z_Surname.?Z_Prename.?Z_Username.mkval(?Z_Dateofbirth,one.zero)
+						.?Z_Serialnumber),
+					proper,
+					Actor.?Order.crypt(pk(Judge),?Z_Surname.?Z_Prename.?Z_Username.
+						mkval(?Z_Dateofbirth,one.zero).?Z_Serialnumber)
+				);
+				
+			%% checking if agent FCS is member of the FcsSet
+			%% (this is necessary in order to preventing
+			%% to accept credential from an agent who is
+			%% not one of the expected consortium agent)
+			select{ 
+				
+				on (contains(FcsSet,FCS)) :
+				{
+				
+				%% if it is the case the Winery stores the credential and the order
+				%% information (along with encrypted Wineshopper's data that the Judge can decrypt)
+				add(	
+					db(Actor),
+					ordered.spk(
+								sign(inv(pk(FCS)),credential(FCS,Z_NymFcs,blind(Z_Masec, Z_Surname).
+									blind(Z_Masec, Z_Prename).blind(Z_Masec, Z_Username).mkval(Z_Dateofbirth,one.zero).
+									mkval(Z_ExpDate,zero.one).Z_Serialnumber)).Z_Masec,
+								crypt(pk(Judge),Z_Surname.Z_Prename.Z_Username.mkval(Z_Dateofbirth,one.zero).
+								Z_Serialnumber),
+								proper,
+								Actor.Order.crypt(pk(Judge),Z_Surname.Z_Prename.Z_Username.
+									mkval(Z_Dateofbirth,one.zero).Z_Serialnumber)
+					)
+				);
+				executabilityW;
+				} %% on closure
+			} %% select closure
+			
+		} %% body closure
+	} %% end of Winery entity
+	
+	
+	
+	%% Formalizing the body of the Environment entity
+
+	body{ 
+		
+		NymIt := ptag(masec_(it),ws,x1,x2);
+		NymBank:= ptag(masec_(bank),ws,x3,x4);
+		
+		%% We suppose that the Wineshopper has obtained a credential (passport) from Italy and 
+		%% has stored it in its db
+		add(db(ws),credp.sign(inv(pk(it)),
+			credential(it,NymIt,val1.val2.val3.mkval(val,one.zero).val4))); 
+		add(db(ws),cred.sign(inv(pk(bank)),
+			credential(bank,NymBank,bval1.bval2.ws.bval3.mkval(bval,zero.one)))); 
+		
+		add(db(it),issued.NymIt.credential(it,NymIt,val1.val2.val3.mkval(val,one.zero).val4));
+		add(db(bank),issued.NymBank.
+			credential(bank,NymBank,bval1.bval2.ws.bval3.mkval(bval,zero.one)));
+		
+		NymIt := ptag(masec_(it),i,x5,x6);
+		NymBank:= ptag(masec_(bank),i,x7,x8);
+		
+		add(db(it),issued.NymIt.credential(it,NymIt,val1.val2.val5.mkval(val,one.zero).val4));
+		add(db(bank),issued.NymBank.
+			credential(bank,NymBank,bval1.bval2.i.bval3.mkval(bval,zero.one)));
+		
+		iknows(sign(inv(pk(it)),credential(it,NymIt,val1.val2.val5.mkval(val,one.zero).val4)));
+		iknows(sign(inv(pk(bank)),
+			credential(bank,NymBank,bval1.bval2.i.bval3.mkval(bval,zero.one))));
+		
+		add(db(fcs), issued.ptag(masec_(fcs),i,x5,x6).
+		credential(fcs,ptag(masec_(fcs), i, x5, x6),blind(masec_(i), val1).
+			blind(masec_(i), val2).blind(masec_(i), val5).blind(masec_(i), mkval(val,one.zero)).
+			blind(masec_(i),mkval(bval,zero.one)).val4));
+			
+		iknows(sign(inv(pk(fcs)), credential(fcs,ptag(masec_(fcs),i,x5,x6),
+			blind(masec_(i), val1).blind(masec_(i), val2).blind(masec_(i), val5).mkval(val,one.zero).
+			mkval(bval,zero.one).val4)));
+	
+
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		%% Instantiation of shoppers, wineries and 
+		%% Judge (trusted third party)
+
+		%% setting the Oecdgov members set
+		Oecdgov := {aus,a,b,cdn,cz,dk,sf,f,d,gr,h,is,irl,it,j,kr,lu,
+		mex,nl,nz,n,pl,p,sk,es,se,che,tr,uk,us};
+		CCBrands := {bank};
+		FSet := {fcs};
+		
+		new Wineshopper(ws,fcs,w,t,o);
+		new FCS(fcs,Oecdgov,CCBrands);
+		new Winery(w,t,{fcs});
+		
+		%% Judge instantiation
+		%% it is aware of the name of the 
+		%% agent playing the role "Winery" 
+		%% (and thus "WineryComplain")
+		%new Judge(t,w);
+    
+	} %% body closure
+
+	goals
+	
+	%% 1. Correct presentation of credentials
+
+	%% (a) If the org accepts an order, then the order was given that
+	%% way by an honest or dishonest user:
+
+	correct_presentation_of_credentials_and_blinded_Signatures:
+	[](
+		forall Judge Order BPrename BNumber BSurname Other B I Agent Org FCS P 
+		N1 N2 N3 N4 X1 X2 X3 X4 BlSurname BlPrename BlUsername Dateofbirth BExpDate
+		Serialnumber Surname Prename Username.
+		
+		contains(
+			db(Org),
+			ordered.spk(
+				sign(inv(pk(FCS)),credential(FCS,ptag(masec_(FCS), P, N3, N4),
+					BlSurname.BlPrename.BlUsername.mkval(Dateofbirth,one.zero).
+					mkval(BExpDate,zero.one).Serialnumber)).masec_(Agent),
+				crypt(pk(Judge),Surname.Prename.Username.mkval(Dateofbirth,one.zero).
+					Serialnumber),
+				proper,
+				Org.Order.crypt(pk(Judge),Surname.Prename.Username.
+					mkval(Dateofbirth,one.zero).Serialnumber)
+			)
+		)
+		=>
+		(contains(
+			db(FCS),
+			issued.ptag(masec_(FCS), P, N1, N2).credential(FCS,ptag(masec_(FCS), P, N1, N2),
+			BlSurname.BlPrename.BlUsername.blind(masec_(Agent),mkval(Dateofbirth,one.zero)).
+			blind(masec_(Agent),mkval(BExpDate,zero.one)).Serialnumber)
+		)
+		
+		&
+		
+		contains(
+			db(I),
+			issued.ptag(masec_(I),Agent,X1,X2).credential(I,ptag(masec_(I),Agent,X1,X2),
+			Surname.Prename.Username.mkval(Dateofbirth,one.zero).Other)
+		)
+		
+		&
+		
+		contains(
+			db(B),
+			issued.ptag(masec_(B),Agent,X3,X4).credential(bank,ptag(masec_(B),Agent,X3,X4),
+			BSurname.BPrename.Agent.BNumber.mkval(BExpDate,zero.one))
+		))
+		
+		&
+		(
+			( %% not(dishonest(Agent)) case
+				(
+					contains(
+						db(Agent),
+						ordered.Org.Order
+					)
+				)
+				
+			|
+				%% dishonest(Agent) case
+				%% since the intruder has received a legitimate
+				%% credential ((s)he is an Italian citizen and is 
+				%% at least 18 years old and has a CC credential) 
+				%% we have to consider the possibility in which 
+				%% (s)he use that credential to order from a Winery
+				%% But we can't be sure that (s)he will
+				%% add the order to (her)his db
+				dishonest(Agent)
+			)
+		) %% end of AND 
+	); %% end of []
+
+	%% (b) if the judge reveals the identity of a user who has ordered
+	%% then this user has indeed ordered
+
+	%% we have not modeled the Judge entity in this scene because we 
+	%% focused on FCS credentials and blinded values (see Scene 1 for
+	%% an example on how to model Judge entity and this goal) So
+	%% we cannot express this goal in this file
+	
+	%% (c) when the intruder knows a credential, then (s)he knows the master secret
+	%% it is bound to or it is a legitimate credential for (s)he:
+	
+	intruder_knowledge_credential_masec_PPort:
+	[](
+		forall I Masec X1 X2 X3 Agent.
+		iknows(credential(I,ptag(masec_(I),Agent,X1,X2),X3)) 
+			=> 
+		dishonest(Agent)
+			|
+		dishonest(I)
+	);	
+	
+	%% 2. Privacy: we only consider some secrecy properties for now.
+	%% 2a. Nobody ever learns the master secret of an honest agent
+	
+	gdishonest: []( 
+		forall Agent. 
+		iknows(masec_(Agent)) 
+			=>
+		dishonest(Agent));
+
+	%% 2b. Nobody ever learns other people's credentials or their values 
+	%% (in this scene).
+	
+	nobody_learns_others_cred:
+	[](    
+		forall I X1 X2 X3 Agent.
+		iknows(credential(I,ptag(masec_(I),Agent,X1,X2),X3)) &
+		!dishonest(I)
+		=>
+		dishonest(Agent) 
+	);
+	
+	%% 3. Accountability
+	%% If shop has an order with payment timeout, then Judge can find out
+	%% the real name:
+
+	%% we have not modeled the Judge entity in this scene because we 
+	%% focused on FCS credentials and blinded values (see Scene 1 for
+	%% an example on how to model Judge entity and this goal) So
+	%% we cannot express this goal in this file
+	
+} %% end of Environment entity

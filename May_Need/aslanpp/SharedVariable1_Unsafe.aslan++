@@ -1,0 +1,47 @@
+% @verbatim(Modifiable shared variable by inheritance)
+% @clatse(--nb 2)
+% @ofmc(NO)
+
+specification SharedVariable1_Unsafe
+channel_model CCM 
+
+entity Environment {
+  symbols
+    succ(nat): nat;
+
+  entity Session (A, B: agent) {
+
+    symbols
+      SharedVar: nat;
+
+    entity Alice (Actor, B: agent) {
+
+      body {
+        SharedVar := succ(SharedVar); 
+            % this refers two times to the inherited
+            % shared variable - does not work for OFMC!
+        Actor *->  B: i; % just an authentic signal to B
+      }
+    }
+
+    entity Bob (A,Actor: agent) {
+
+      body {
+        A *-> Actor: i;
+        assert test_SharedVar_still_1: SharedVar = 1;
+             % should report violation because now
+             % "shared(SharedVarId, succ(1))" holds
+      }
+    }
+
+    body {
+      SharedVar := 1;
+      new Alice(A,B);
+      new Bob  (A,B);
+    }
+  }
+
+  body
+    any A B. Session(A,B);
+}
+

@@ -1,0 +1,440 @@
+%% PROTOCOL: SAML v2 Web SSO Profile
+%% VARIANT: SP-initiated SSO Profile with back channels
+%% MODELER: Luca Compagna, Alessandro Sorniotti, Xavier Chantry, 
+%%          and Giancarlo Pellegrino SAP Research, 2009
+
+role client( 
+    C, IdP, SP            : agent,
+    KIdP                  : public_key,
+    Ch_C2SP_1, Ch_SP2C_1,
+    Ch_C2IdP, Ch_IdP2C    : channel,
+    Set_Ch_SP2C_2         : (agent.channel.channel) set,
+    URI                   : protocol_id,
+    Use_Artifact_SP       : nat,
+    Use_Artifact_IdP      : nat
+)
+    
+played_by C
+def=
+  local           
+    State                       : nat,
+    Ch_C2SP_2, Ch_SP2C_2        : channel,
+    AnySP                       : agent,      
+    AnyURI                      : protocol_id,      
+    IDar, IDaa, Resource,
+    REF_1, REF_2                : text
+
+  const 
+    snd, rcv : channel
+
+  init State:=0 
+       
+  transition
+    %% BEGIN: C requests for a resource
+    1. State = 0 /\ Ch_SP2C_1(start) 
+       =|>
+       State':=2 /\ snd(Ch_C2SP_1, SP, C.URI)
+                 /\ witness(C, SP, sp_c_uri,URI)
+
+    %% No artifact 1:
+    %% - C receives an AuthnRequest from SP
+    %% - C forwards the message to IDP
+    2. State = 2 /\ Use_Artifact_SP = 0 
+                 /\ rcv(Ch_SP2C_1, SP, AnySP'.IdP.IDar'.AnyURI') 
+       =|> 
+       State':=4 /\ snd(Ch_C2IdP,IdP, C.AnySP'.IdP.IDar'.AnyURI') 
+    
+    %% Artifact 1: 
+    %% - C receives an Artifact from SP
+    %% - C forwards the Artifact to IDP
+    3. State = 2 /\ Use_Artifact_SP = 1
+                 /\ rcv(Ch_SP2C_1, SP, IdP.AnySP'.REF_1')
+       =|> 
+       State':=4 /\ snd(Ch_C2IdP,IdP, C.AnySP'.REF_1')
+
+    %% No artifact 2:
+    %% - C receives AuthnResponse from IDP
+    %% - C forwards the Response to SP	
+    4. State = 4 /\ Use_Artifact_IdP = 0
+                 /\ rcv(Ch_IdP2C,IdP, IdP.AnyURI'.IDar'.
+				        {AnySP'.IdP.C.IDaa'.AnyURI'}_inv(KIdP)) 
+                 /\ in(AnySP'.Ch_C2SP_2'.Ch_SP2C_2', Set_Ch_SP2C_2) 
+       =|>
+       State':=6 /\ snd(Ch_C2SP_2', AnySP', IdP.AnyURI'.IDar'.
+	                    {AnySP'.IdP.C.IDaa'.AnyURI'}_inv(KIdP))
+
+    %% Artifact 2:
+    %% - C receives an Artifact from IdP
+    %% - C forwards the Artifact to SP
+    5. State = 4 /\ Use_Artifact_IdP = 1
+                 /\ rcv(Ch_IdP2C, IdP, AnySP'.IdP.REF_2') 
+                 /\ in(AnySP'.Ch_C2SP_2'.Ch_SP2C_2', Set_Ch_SP2C_2) 
+       =|>
+       State':=6 /\ snd(Ch_C2SP_2', AnySP', IdP.REF_2')
+
+    %% C receives the Resource				 
+    6. State = 6 /\ rcv(Ch_SP2C_2,AnySP, AnyURI'.Resource') 
+       =|>
+       State':=8 /\ request(C, SP, c_sp_resource, Resource')
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role serviceProvider (
+    C, SP                 : agent,
+    KSP                   : public_key,
+    Ch_SP2C_1, Ch_C2SP_1,
+    Ch_SP2C_2, Ch_C2SP_2  : channel,
+    Set_C_IdP             : (agent.agent.public_key) set,
+    Set_bc1               : (agent.channel.channel) set,
+    Set_bc2               : (agent.channel.channel) set,
+    Set_ConsumedAA        : (agent.text) set,
+    Set_Artifact          : (text.agent.agent.text.message) set,
+    Set_URI               : (protocol_id) set,
+    Use_Artifact_SP       : nat,
+    Use_Artifact_IdP      : nat 
+)
+    
+played_by SP
+def=
+  local 
+    Ch_IdP2SP_1,Ch_SP2IdP_1,
+    Ch_IdP2SP_2,Ch_SP2IdP_2  : channel,
+    State                    :  nat,
+    URI                      :  protocol_id,
+    IDar, IDaa, 
+    IDresolve_1, IDresolve_2 :  text,
+    Resource                 :  text,
+    REF_1, REF_2             :  text,
+    IdP                      :  agent,
+    KIdP                     :  public_key
+
+  const 
+    snd, rcv: channel         
+
+  init State:=1
+  
+  transition
+
+    %% No Artifact 1:
+    %% - SP receives an URI
+    %% - SP begins the protocol by sending an Authntication Request to a trusted IDP
+    1. State = 1 /\ Use_Artifact_SP = 0 
+                 /\ rcv(Ch_C2SP_1,C, C.URI')
+                 /\ in(URI',Set_URI)
+                 /\ in(C.IdP'.KIdP',Set_C_IdP)
+       =|>
+       State':=5 /\ IDar':=new() 
+                 /\ snd(Ch_SP2C_1, C, SP.IdP'.IDar'.URI')
+
+    %% Artifact 1:
+    %% - SP receives an URI
+    %% - SP creates and stores the Authentication Request
+    %% - SP sends an Artifact to C using a front channel
+    2. State = 1 /\ Use_Artifact_SP = 1 
+                 /\ rcv(Ch_C2SP_1, C, C.URI') 
+                 /\ in(URI', Set_URI)
+                 /\ in(C.IdP'.KIdP', Set_C_IdP)
+       =|>
+       State':=3 /\ IDar':=new()
+                 /\ REF_1':=new() 
+                 /\ Set_Artifact':= cons(REF_1'.SP.IdP'.IDar'.URI', Set_Artifact) 
+                 /\ snd(Ch_SP2C_1, C, IdP'.SP.REF_1')
+
+    %% Artifact 1: 
+    %% - SP receives <ArtifactResolve> message
+    %% - then he sends to IdP an <ArtifactResponse>
+    3. State = 3 /\ Use_Artifact_SP = 1 
+                 /\ rcv(Ch_IdP2SP_1', IdP', IDresolve_1'.IdP'.SP.REF_1') 
+                 /\ in(IdP'.Ch_IdP2SP_1'.Ch_SP2IdP_1', Set_bc1)
+                 /\ in(REF_1'.SP.IdP'.IDar'.URI', Set_Artifact)
+       =|>
+       State':=5 /\ snd(Ch_SP2IdP_1',IdP', IDresolve_1'.SP.IdP'.IDar'.URI')
+                 /\ Set_Artifact':= delete(REF_1'.SP.IdP'.IDar'.URI', Set_Artifact)
+
+
+	
+    %% No Artifact 2:
+    %% - SP receives AuthnResponse
+    %% - then sends to C the Resource
+    4. State = 5 /\ Use_Artifact_IdP = 0  
+                 /\ rcv(Ch_C2SP_2, C, IdP'.URI'.IDar.{SP.IdP'.C.IDaa'.URI'}_inv(KIdP')) 
+                 /\ in(C.IdP'.KIdP', Set_C_IdP)
+                 /\ not(in(IdP'.IDaa', Set_ConsumedAA))
+                 /\ in(URI', Set_URI)
+       =|>
+       State':=9 /\ Resource':=new() 
+                 /\ snd(Ch_SP2C_2, C, URI'.Resource')
+                 /\ Set_ConsumedAA':= cons(IdP'.IDaa',Set_ConsumedAA)
+                 /\ request(SP, C, sp_c_uri, URI')
+                 /\ witness(SP, C, c_sp_resource, Resource')
+                 /\ secret(Resource', c_sp_resource, {C,SP})
+
+    %% Artifact 2: 
+    %% - SP receives an Artifact from C
+    %% - then creates and sends an <ArtifactResolve> message to IdP
+    5. State = 5 /\ Use_Artifact_IdP = 1  
+                 /\ rcv(Ch_C2SP_2, C, IdP'.REF_2') 
+                 /\ in(IdP'.Ch_IdP2SP_2'.Ch_SP2IdP_2',Set_bc2)
+       =|>
+       State':=7 /\ IDresolve_2' := new()
+                 /\ snd(Ch_SP2IdP_2', IdP', IDresolve_2'.SP.IdP'.REF_2')
+
+    %% Artifact 2: 
+    %% - SP receives <ArtifactResponse> message from IdP
+    %% - then sends to C the Resource
+    6. State = 7 /\ Use_Artifact_IdP = 1
+                 /\ rcv(Ch_IdP2SP_2', IdP', IDresolve_2.IdP'.URI'.IDar.
+				        {SP.IdP'.C.IDaa'.URI'}_inv(KIdP'))
+                 /\ in(IdP'.Ch_IdP2SP_2'.Ch_SP2IdP_2',Set_bc2)
+                 /\ in(C.IdP'.KIdP',Set_C_IdP)
+                 /\ not(in(IdP'.IDaa',Set_ConsumedAA))
+                 /\ in(URI',Set_URI)
+       =|>
+       State':=9 /\ Resource':=new() 
+                 /\ snd(Ch_SP2C_2, C, URI'.Resource')
+                 /\ Set_ConsumedAA':= cons(IdP'.IDaa',Set_ConsumedAA)
+                 /\ request(SP,C,sp_c_uri,URI')
+                 /\ witness(SP,C,c_sp_resource,Resource')
+                 /\ secret(Resource',c_sp_resource,{C,SP})
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role identityProvider ( 
+    C, IdP            :  agent,
+    KIdP              : public_key,
+    Ch_IdP2C,Ch_C2IdP : channel,
+    TrustedSPs        : (agent) set,
+    Set_IdP_Artifact  : (text.agent.protocol_id.text.
+                         {agent.agent.agent.text.protocol_id}_inv(public_key)) set,
+    Set_bc1           : (agent.channel.channel) set,
+    Set_bc2           : (agent.channel.channel) set,
+    Use_Artifact_SP   : nat,
+    Use_Artifact_IdP  : nat 
+)
+        
+played_by IdP
+def=
+  local
+    Ch_IdP2SP_1,Ch_SP2IdP_1,
+    Ch_IdP2SP_2,Ch_SP2IdP_2  : channel,
+    URI                      : protocol_id,
+    SP                       : agent,
+    IDar, IDaa, 
+    IDresolve_1, IDresolve_2 : text,
+    REF_1, REF_2             : text,
+    State                    : nat
+
+  const
+    snd, rcv : channel
+     
+  init State:=7
+  
+  transition
+    
+    %% No artifact at all:
+    %% - IdP receives the Authentication Request
+    %% - then sends to SP the Authentication Response 
+    1. State = 7  /\ Use_Artifact_SP = 0 
+                  /\ Use_Artifact_IdP = 0
+                  /\ rcv(Ch_C2IdP,C, C.SP'.IdP.IDar'.URI') 
+                  /\ in(SP',TrustedSPs)
+       =|>
+       State':=13 /\ IDaa' := new()
+                  /\ snd(Ch_IdP2C,C, IdP.URI'.IDar'.{SP'.IdP.C.IDaa'.URI'}_inv(KIdP))
+
+    %% Artifact 1:
+    %% - IdP receives an Artifact from C
+    %% - then sends an <ArtifactResolve> message to SP
+    2. State = 7  /\ Use_Artifact_SP = 1
+	              /\ rcv(Ch_C2IdP,C, C.SP'.REF_1') 
+                  /\ in(SP'.Ch_IdP2SP_1'.Ch_SP2IdP_1',Set_bc1) 
+                  /\ in(SP',TrustedSPs)
+       =|>
+       State':=9  /\ IDresolve_1' := new()
+                  /\ snd(Ch_IdP2SP_1',SP', IDresolve_1'.IdP.SP'.REF_1')
+
+    %% Artifact only 2: 
+    %% - receives the Authentication Request from SP
+    %% - then sends sends to C an Artifact (REF_2)
+    3. State = 7  /\ Use_Artifact_SP = 0 
+                  /\ Use_Artifact_IdP = 1
+                  /\ rcv(Ch_C2IdP,C, C.SP'.IdP.IDar'.URI') 
+                  /\ in(SP',TrustedSPs)
+       =|>
+       State':=11 /\ IDaa' := new()
+                  /\ REF_2':=new() 
+                  /\ Set_IdP_Artifact':= cons(REF_2'.IdP.URI'.IDar'.
+                        {SP'.IdP.C.IDaa'.URI'}_inv(KIdP), Set_IdP_Artifact) 
+                  /\ snd(Ch_IdP2C, C, SP'.IdP.REF_2')
+				  
+    %% Artifact only 1: 
+    %% - IdP receives <ArtifactResponse> message from SP 
+    %% - then he sends to C the Authntication Response
+    4. State = 9  /\ Use_Artifact_SP = 1 
+                  /\ Use_Artifact_IdP = 0
+                  /\ rcv(Ch_SP2IdP_1',SP', IDresolve_1.SP'.IdP.IDar'.URI')
+                  /\ in(SP'.Ch_IdP2SP_1'.Ch_SP2IdP_1',Set_bc1)
+                  /\ in(SP',TrustedSPs)
+       =|>
+       State':=13 /\ IDaa' := new()
+                  /\ snd(Ch_IdP2C, C, IdP.URI'.IDar'.{SP'.IdP.C.IDaa'.URI'}_inv(KIdP))
+
+    %% Artifact 1 and 2: 
+    %% - IdP receives <ArtifactResponse> message from SP 
+    %% - then creates the AuthnResponse, stores it and sends to C an Artifact
+    5. State = 9  /\ Use_Artifact_SP = 1 
+                  /\ Use_Artifact_IdP = 1
+                  /\ rcv(Ch_SP2IdP_1',SP', IDresolve_1.SP'.IdP.IDar'.URI')
+                  /\ in(SP'.Ch_IdP2SP_1'.Ch_SP2IdP_1',Set_bc1)
+                  /\ in(SP',TrustedSPs)
+       =|>
+       State':=11 /\ IDaa' := new()
+                  /\ REF_2':=new() 
+                  /\ Set_IdP_Artifact':= cons(REF_2'.IdP.URI'.IDar'.
+                        {SP'.IdP.C.IDaa'.URI'}_inv(KIdP), Set_IdP_Artifact) 
+                  /\ snd(Ch_IdP2C, C, SP'.IdP.REF_2')
+
+    %% Artifact 2: 
+    %% - Idp receives <ArtifactResolution> message from SP
+    %% - then sends an <ArtifactResponse> to SP
+    6. State = 11 /\ Use_Artifact_IdP = 1 
+                  /\ rcv(Ch_SP2IdP_2', SP', IDresolve_2'.SP'.IdP.REF_2') 
+                  /\ in(SP'.Ch_IdP2SP_2'.Ch_SP2IdP_2', Set_bc2)
+                  /\ in(REF_2'.IdP.URI'.IDar'.
+				        {SP'.IdP.C.IDaa'.URI'}_inv(KIdP), Set_IdP_Artifact)
+	   =|>
+       State':=13 /\ snd(Ch_IdP2SP_2', SP', IDresolve_2'.IdP.URI'.IDar'.
+                         {SP'.IdP.C.IDaa'.URI'}_inv(KIdP))
+                  /\ Set_IdP_Artifact':= delete(REF_2'.IdP.URI'.IDar'.
+                         {SP'.IdP.C.IDaa'.URI'}_inv(KIdP), Set_IdP_Artifact)
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role enviroment()
+def=
+
+  local 
+    %% Maps client c to the channels it is using in sending 
+    %% authentication assertions to a given SP
+    Set_C_Ch_SP_2    : (agent.channel.channel) set,
+    %%Set_CAA        : ({agent.agent.agent.text.message}_inv(public_key)) set,
+        
+    %% Trusted SP for the identity provider idp
+    Set_idp_TrustedSP: (agent) set,
+    
+    %% Maps each client to its identity provider' name and public key
+    Set_C_IdP        : (agent.agent.public_key) set,
+    
+    %% Maps each SP to its 4 back channels
+    Set_IdPs_BC1     : (agent.channel.channel) set,
+    Set_IdPs_BC2     : (agent.channel.channel) set,
+    
+    %% Maps each IdP to its 4 back channels
+    Set_Is_BC1      : (agent.channel.channel) set,
+    Set_Is_BC2      : (agent.channel.channel) set,
+    Set_SPs_BC1      : (agent.channel.channel) set,
+    Set_SPs_BC2      : (agent.channel.channel) set
+
+
+  const 
+    sp_c_uri, c_sp_resource, 
+    uri_i, uri_sp            : protocol_id,
+    c,idp,sp                 : agent,
+    c2idp_s1, idp2c_s1,
+    c2idp_s2, idp2c_s2       : channel,
+    c2i_1, i2c_1,
+    c2i_2, i2c_2,
+    c2sp_1, sp2c_1,
+    c2sp_2, sp2c_2           : channel,
+    idp2i_1, i2idp_1,
+    idp2i_2, i2idp_2,
+    idp2sp_1, sp2idp_1,
+    idp2sp_2, sp2idp_2       : channel,
+    kidp,ki,ksp              : public_key,
+    n                        : text
+
+  init 
+  
+    %% Channel assumptions
+    %% C <-> IdP
+       confidential(idp, c2idp_s1)  
+    /\ weakly_authentic(c2idp_s1)
+    /\ authentic(idp, idp2c_s1)
+    /\ confidential(c, idp2c_s1)
+    /\ link(c2idp_s1, idp2c_s1)
+    /\ confidential(idp, c2idp_s2)  
+    /\ weakly_authentic(c2idp_s2)
+    /\ authentic(idp,idp2c_s2)
+    /\ confidential(c, idp2c_s2)
+    /\ link(c2idp_s2, idp2c_s2)
+	
+    %% C's channels to SPs
+    /\ unilateral_conf_auth(c, i, c2i_1, i2c_1)
+    /\ unilateral_conf_auth(c, sp, c2sp_1, sp2c_1)
+	
+    /\ unilateral_conf_auth(c, i, c2i_2, i2c_2)
+    /\ unilateral_conf_auth(c, sp, c2sp_2, sp2c_2)
+
+    %% security properties of back channels
+    /\ unilateral_conf_auth(idp, sp, idp2sp_1, sp2idp_1)
+    /\ unilateral_conf_auth(idp, i, idp2i_1, i2idp_1)
+       
+    %% Set initialization
+    /\ Set_idp_TrustedSP:={i, sp}
+    /\ Set_C_Ch_SP_2:={i.c2i_2.i2c_2, sp.c2sp_2.sp2c_2}
+    /\ Set_C_IdP:={c.idp.kidp}
+	
+    %% SP's back channel
+    /\ Set_SPs_BC1:={idp.idp2sp_1.sp2idp_1}
+    /\ Set_SPs_BC2:={} %{idp.idp2sp_2.sp2idp_2}
+	
+    %% intruder's back channel
+    /\ Set_Is_BC1:={idp.idp2i_1.i2idp_1}
+    /\ Set_Is_BC2:= {} %{idp.idp2i_2.i2idp_2}
+	
+    %% IdP's back channel
+    /\ Set_IdPs_BC1:={i.idp2i_1.i2idp_1, sp.idp2sp_1.sp2idp_1}
+    /\ Set_IdPs_BC2:={} %{i.idp2i_2.i2idp_2, sp.idp2sp_2.sp2idp_2}
+
+  intruder_knowledge={c, sp, idp, 
+                      kidp, ksp, ki, inv(ki), n, 
+                      uri_i, uri_sp, c2i_1, i2c_1, c2i_2, i2c_2, 
+                      c2sp_1, sp2c_1, c2sp_2, sp2c_2}
+  
+  composition
+       client(c, idp, i,  kidp,  c2i_1, i2c_1,  c2idp_s1, idp2c_s1, 
+	          Set_C_Ch_SP_2, uri_i,  1, 0) 
+    /\ client(c, idp, sp, kidp, c2sp_1, sp2c_1, c2idp_s2, idp2c_s2, 
+	          Set_C_Ch_SP_2, uri_sp, 1, 0) 
+    /\ serviceProvider(c, i,  ki,  i2c_1,  c2i_1,  i2c_2,  c2i_2,  
+	          Set_C_IdP, Set_Is_BC1, Set_Is_BC2, {}, {}, {uri_i},  1, 0)
+    /\ serviceProvider(c, sp, ksp, sp2c_1, c2sp_1, sp2c_2, c2sp_2, 
+	          Set_C_IdP, Set_SPs_BC1, Set_SPs_BC2, {}, {}, {uri_sp}, 1, 0)
+    /\ identityProvider(c, idp, kidp, idp2c_s1, c2idp_s1, 
+	          Set_idp_TrustedSP, {}, Set_IdPs_BC1, Set_IdPs_BC2, 1, 0)
+    /\ identityProvider(c, idp, kidp, idp2c_s2, c2idp_s2, 
+	          Set_idp_TrustedSP, {}, Set_IdPs_BC1, Set_IdPs_BC2, 1, 0)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+goal
+
+    % Confidentiality (G12)
+    secrecy_of c_sp_resource
+
+    % Message authentication (G2)
+    authentication_on sp_c_uri
+    %% weak_authentication_on c_sp_resource
+    authentication_on c_sp_resource
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+enviroment()

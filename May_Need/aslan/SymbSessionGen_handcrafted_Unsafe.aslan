@@ -1,0 +1,252 @@
+% Specification: SymbSessionGen_Unsafe
+% Channel model: CCM
+% Goals as attack states: yes
+% Orchestration client: N/A
+% Horn clauses level: ALL
+% Optimization level: LUMP
+% Stripped output (no comments and line information): no
+section signature:
+	message > text
+	ak : agent -> public_key
+	check_all_sessions_finished : agent * agent * agent * agent * nat * nat -> fact
+	check_session_parameters_iknown_and_distinct : agent * agent * nat * nat -> fact
+	ck : agent -> public_key
+	defaultPseudonym : agent -> agent
+	descendant : nat * nat -> fact
+	dishonest : agent -> fact
+	finished : agent * nat * nat -> fact
+	pk : agent -> public_key
+	sign : private_key * message -> message
+	state_Alice : agent * nat * nat * agent * nat -> fact
+	state_Bob : agent * nat * nat * agent * nat -> fact
+	state_Environment : agent * nat * nat * agent * agent * agent * agent -> fact
+	state_Session : agent * nat * nat * agent * agent * nat -> fact
+
+section types:
+	A : agent
+	A1 : agent
+	A1_1 : agent
+	A2 : agent
+	A2_1 : agent
+	Actor : agent
+	Ak_arg_1 : agent
+	B : agent
+	B1 : agent
+	B1_1 : agent
+	B2 : agent
+	B2_1 : agent
+	Ck_arg_1 : agent
+	Descendant_Closure_arg_1 : nat
+	Descendant_Closure_arg_2 : nat
+	Descendant_Closure_arg_3 : nat
+	E_S_A_Actor : agent
+	E_S_A_B : agent
+	E_S_A_IID : nat
+	E_S_A_Id : nat
+	E_S_A_SL : nat
+	E_S_Actor : agent
+	E_S_B_A : agent
+	E_S_B_Actor : agent
+	E_S_B_IID : nat
+	E_S_B_Id : nat
+	E_S_B_SL : nat
+	E_S_IID : nat
+	E_S_SL : nat
+	E_siS1_A : agent
+	E_siS1_B : agent
+	E_siS_A : agent
+	E_siS_B : agent
+	IID : nat
+	IID_1 : nat
+	IID_2 : nat
+	IID_3 : nat
+	IID_4 : nat
+	Id : nat
+	Pk_arg_1 : agent
+	SL : nat
+	Sign_arg_1 : private_key
+	Sign_arg_2 : message
+	Sym_A : agent
+	atag : text
+	ctag : text
+	dummy_agent : agent
+	a : agent	b : agent	c : agent	d : agent
+	dummy_nat : nat
+	false : fact
+	stag : text
+	true : fact
+
+section inits:
+
+initial_state init :=
+	dishonest(i).
+	iknows(atag).
+	iknows(ctag).
+	iknows(i).
+	iknows(a).	iknows(b).	iknows(c).	iknows(d).
+	iknows(inv(ak(i))).
+	iknows(inv(ck(i))).
+	iknows(inv(pk(i))).
+	iknows(stag).
+	state_Environment(dummy_agent, dummy_nat, 1, dummy_agent, dummy_agent, dummy_agent, dummy_agent).
+	true
+
+section hornClauses:
+
+	hc public_ck(Ck_arg_1) :=
+		iknows(ck(Ck_arg_1)) :-
+			iknows(Ck_arg_1)
+
+	hc public_ak(Ak_arg_1) :=
+		iknows(ak(Ak_arg_1)) :-
+			iknows(Ak_arg_1)
+
+	hc public_pk(Pk_arg_1) :=
+		iknows(pk(Pk_arg_1)) :-
+			iknows(Pk_arg_1)
+
+	hc public_sign(Sign_arg_1, Sign_arg_2) :=
+		iknows(sign(Sign_arg_1, Sign_arg_2)) :-
+			iknows(Sign_arg_1),
+			iknows(Sign_arg_2)
+
+	hc inv_sign(Sign_arg_1, Sign_arg_2) :=
+		iknows(Sign_arg_2) :-
+			iknows(sign(Sign_arg_1, Sign_arg_2))
+
+	hc descendant_closure(Descendant_Closure_arg_1, Descendant_Closure_arg_2, Descendant_Closure_arg_3) :=
+		descendant(Descendant_Closure_arg_1, Descendant_Closure_arg_3) :-
+			descendant(Descendant_Closure_arg_1, Descendant_Closure_arg_2),
+			descendant(Descendant_Closure_arg_2, Descendant_Closure_arg_3)
+
+section rules:
+
+
+% line 34
+% symbolic instance
+%     new Session(E_siS_A,E_siS_B,1)
+% guard
+%     !(E_siS_A = E_siS_B)
+step step_3_Environment__line_34(A1, A2, Actor, B1, B2, E_siS_A, E_siS_B, IID, IID_1) :=
+	iknows(E_siS_A).
+	iknows(E_siS_B).
+	state_Environment(Actor, IID, 1, A1, B1, A2, B2) &
+	not(equal(E_siS_A, E_siS_B))
+	=[exists IID_1]=>
+	descendant(IID, IID_1).
+	iknows(E_siS_A).
+	iknows(E_siS_B).
+	state_Environment(Actor, IID, 2, A1, B1, A2, B2).
+	state_Session(dummy_agent, IID_1, 1, E_siS_A, E_siS_B, 1)
+
+% line 35
+% symbolic instance
+%     new Session(E_siS1_A,E_siS1_B,2)
+% guard
+%     !(E_siS1_A = E_siS1_B)
+step step_4_Environment__line_35(A1, A2, Actor, B1, B2, E_siS1_A, E_siS1_B, IID, IID_2) :=
+	iknows(E_siS1_A).
+	iknows(E_siS1_B).
+	state_Environment(Actor, IID, 2, A1, B1, A2, B2) &
+	not(equal(E_siS1_A, E_siS1_B))
+	=[exists IID_2]=>
+	descendant(IID, IID_2).
+	iknows(E_siS1_A).
+	iknows(E_siS1_B).
+	state_Environment(Actor, IID, 3, A1, B1, A2, B2).
+	state_Session(dummy_agent, IID_2, 1, E_siS1_A, E_siS1_B, 2)
+
+% line 38
+% guard
+%     (((((((((finished(?A1,1,1) & finished(?B1,2,1)) & finished(?A2,1,2)) & finished(?B2,2,2)) & !(?A1 = ?B1)) & !(?A2 = ?B2)) & (?A1 = ?B2)) & !(?A2 = ?B1)) & (?A1 = ?A2)) & !(?B1 = ?B2))
+% lumped line 50 (skipped step label 4)
+% introduce facts due to lumping
+%     check_all_sessions_finished(A1,A2,B1,B2,IID,)
+step step_5_Environment__line_38(A1, A1_1, A2, A2_1, Actor, B1, B1_1, B2, B2_1, IID) :=
+	finished(A1_1, 1, 1).
+	finished(A2_1, 1, 2).
+	finished(B1_1, 2, 1).
+	finished(B2_1, 2, 2).
+	state_Environment(Actor, IID, 3, A1, B1, A2, B2) &
+	equal(A1_1, A2_1) &
+	not(equal(A1_1, B2_1)) &
+	not(equal(A1_1, B1_1)) &
+	not(equal(A2_1, B1_1)) &
+	not(equal(A2_1, B2_1)) &
+	not(equal(B1_1, B2_1))
+	=>
+	check_all_sessions_finished(A1_1, A2_1, B1_1, B2_1, IID, 5).
+	finished(A1_1, 1, 1).
+	finished(A2_1, 1, 2).
+	finished(B1_1, 2, 1).
+	finished(B2_1, 2, 2).
+	state_Environment(Actor, IID, 5, A1_1, B1_1, A2_1, B2_1)
+
+% line 50
+% retract facts
+%     check_all_sessions_finished(A1,A2,B1,B2,IID,)
+step step_6_Environment__line_50(A1, A2, Actor, B1, B2, IID) :=
+	check_all_sessions_finished(A1, A2, B1, B2, IID, 5).
+	state_Environment(Actor, IID, 5, A1, B1, A2, B2)
+	=>
+	state_Environment(Actor, IID, 6, A1, B1, A2, B2)
+
+% line 25
+% introduce facts
+%     check_session_parameters_iknown_and_distinct(A,B,E_S_IID,)
+step step_7_Session__line_25(A, B, E_S_Actor, E_S_IID, Id) :=
+	state_Session(E_S_Actor, E_S_IID, 1, A, B, Id)
+	=>
+	check_session_parameters_iknown_and_distinct(A, B, E_S_IID, 2).
+	state_Session(E_S_Actor, E_S_IID, 2, A, B, Id)
+
+% line 25
+% retract facts
+%     check_session_parameters_iknown_and_distinct(A,B,E_S_IID,)
+% lumped line 28 (skipped step label 3)
+% new instance
+%     new Alice(A,B,Id)
+% lumped line 29 (skipped step label 4)
+% new instance
+%     new Bob(A,B,Id)
+step step_8_Session__line_25(A, B, E_S_Actor, E_S_IID, IID_3, IID_4, Id) :=
+	check_session_parameters_iknown_and_distinct(A, B, E_S_IID, 2).
+	state_Session(E_S_Actor, E_S_IID, 2, A, B, Id)
+	=[exists IID_3, IID_4]=>
+	descendant(E_S_IID, IID_3).
+	descendant(E_S_IID, IID_4).
+	state_Alice(A, IID_3, 1, B, Id).
+	state_Bob(B, IID_4, 1, A, Id).
+	state_Session(E_S_Actor, E_S_IID, 5, A, B, Id)
+
+% line 14
+% introduce facts
+%     finished(E_S_A_Actor,1,E_S_A_Id)
+step step_9_Alice__line_14(E_S_A_Actor, E_S_A_B, E_S_A_IID, E_S_A_Id) :=
+	state_Alice(E_S_A_Actor, E_S_A_IID, 1, E_S_A_B, E_S_A_Id)
+	=>
+	finished(E_S_A_Actor, 1, E_S_A_Id).
+	state_Alice(E_S_A_Actor, E_S_A_IID, 2, E_S_A_B, E_S_A_Id)
+
+% line 20
+% introduce facts
+%     finished(E_S_B_Actor,2,E_S_B_Id)
+step step_10_Bob__line_20(E_S_B_A, E_S_B_Actor, E_S_B_IID, E_S_B_Id) :=
+	state_Bob(E_S_B_Actor, E_S_B_IID, 1, E_S_B_A, E_S_B_Id)
+	=>
+	finished(E_S_B_Actor, 2, E_S_B_Id).
+	state_Bob(E_S_B_Actor, E_S_B_IID, 2, E_S_B_A, E_S_B_Id)
+
+section goals:
+
+attack_state all_sessions_finished1(A1, A2, B1, B2, IID, SL) :=
+	check_all_sessions_finished(A1, A2, B1, B2, IID, SL).
+	finished(A1, 1, 1).
+	finished(A2, 1, 2).
+	finished(B1, 2, 1).
+	finished(B2, 2, 2).
+	not(false)
+
+attack_state session_parameters_iknown_and_distinct(A, B, E_S_IID, E_S_SL) :=
+	check_session_parameters_iknown_and_distinct(A, B, E_S_IID, E_S_SL) &
+	equal(A, B)

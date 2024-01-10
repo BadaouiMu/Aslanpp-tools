@@ -1,0 +1,266 @@
+%% Specification: lop-scene1.aslan
+%% Modeler: Serena Ponta, UGDIST
+%% Documentation: Standalone-LOP.pdf
+%% Description :
+%% human tasks with non-deterministic effects,
+%% a conditional permission assignment, and 
+%% delegation rules
+%% Properties: object based separation of duty
+% @satmc(--mutex=1,--sc=false)
+% @ofmc(no)
+% @clatse(--nb 3)
+
+section signature:
+  
+  %% a user has the permission to execute a task 
+  canExecute  : user * role * task -> fact
+  %% a user can execute a task
+  excludedOwner : user * task -> fact
+  %% user assignment
+  ua : user * role -> fact
+  %% permission assignment
+  pa : role * task -> fact
+  %% a user is active in a role
+  activated : user * role -> fact
+
+  %% a user is delegated to execute a task
+  delegated : user * role * task -> fact
+  %% a role has the permission to delegate a task to another role
+  canDelegate : role * role * task -> fact
+
+  %% a user executed a task
+  executed :user * role * task -> fact
+  %% a task is ready to be executed
+  ready : task -> fact
+  %% a task has been executed  
+  done : task -> fact
+
+
+section types:
+  
+  %% users available at the bank
+  davide,maria,marco,stefano,pierSilvio,pierPaolo: user
+  A,A1,A2: user
+
+  %% roles involved in executing the LOBP
+  preproc,postproc,supervisor,manager,director: role
+  R,R1,R2,R3,R4,R5,R6: role
+  
+  %% tasks
+  inputCustomerData,prepareContract,internalRating,externalRating,approve,sign: task
+  T: task
+
+  %% auxiliary facts expressing global conditions of the process
+  start: fact
+  industrialCustomer :fact
+  privateCustomer : fact
+  highValue : fact
+  lowValue : fact
+  lowrisk : fact
+  intRatingPositive : fact
+  intRatingNegative : fact
+  productOK : fact
+
+  
+section inits:
+
+initial_state init1 := 
+  start.
+  %% user assignment
+  ua(davide,director).
+  ua(maria,manager).
+  ua(marco,manager).
+  ua(stefano,supervisor).
+  ua(pierSilvio,supervisor).
+  ua(pierPaolo,postproc).
+  ua(pierPaolo,preproc).
+  excludedOwner(marco,sign).
+  privateCustomer.
+  lowValue.
+  intRatingNegative
+
+section hornClauses:
+  
+  %% permission assignment
+  hc pa_inputCustomerData :=
+    pa(preproc,inputCustomerData)
+
+  hc pa_prepareContract :=
+    pa(postproc,prepareContract)
+
+  hc pa_internalRating_notInd :=
+    pa(postproc,internalRating) :- privateCustomer
+	   
+  hc pa_internalRating_Ind :=
+    pa(supervisor,internalRating) :- industrialCustomer
+
+  hc pa_externalRating :=
+    pa(supervisor,externalRating)
+
+  hc pa_approve_notInd :=
+    pa(supervisor,approve) :- privateCustomer
+   
+  hc pa_approve_Ind :=
+    pa(manager,approve) :- industrialCustomer
+
+  hc pa_sign_intR :=
+    pa(manager,sign) :- intRatingPositive
+	   
+  hc pa_sign_notintR :=
+    pa(director,sign) :- intRatingNegative
+
+  %% permission to execute a task    
+  hc rbac_ac (A,R,T) := 
+    canExecute(A,R,T) :- ua(A,R), activated(A,R), pa(R,T)
+
+  hc delegation_ac (A,R,T) := 
+    canExecute(A,R,T) :- delegated(A,R,T)
+
+  hc lowrisk :=
+    lowrisk :- intRatingPositive, lowValue
+
+  %% delegation rules conditions
+  hc delegation_approveMgrSup := 
+    canDelegate(manager,supervisor,approve) :- pa(manager,approve), intRatingPositive
+	                                           %,    lowValue %Solution for ObjSoD
+
+  hc delegation_signMgrSup := 
+    canDelegate(manager,supervisor,sign) :-  pa(manager,sign), intRatingPositive
+
+  hc delegation_signDirMgr := 
+    canDelegate(director,manager,sign) :-  pa(director,sign), lowValue
+
+
+  hc delegation_extRatingSupPost := 
+    canDelegate(supervisor,postproc,externalRating) :-  pa(supervisor,externalRating), lowValue
+
+	    
+section rules:
+
+  %% task execution
+  step task_execution(T,A,R) :=
+    ready(T).
+    canExecute(A,R,T).
+    not(excludedOwner(A,T))
+    =>
+    executed(A,R,T).
+    done(T)
+
+  %% task execution with non deterministic effects
+  step task_inputCustData_execution_ind(A,R) :=
+    ready(inputCustomerData).
+    canExecute(A,R,inputCustomerData).
+    not(excludedOwner(A,inputCustomerData)).
+    privateCustomer
+    =>
+    executed(A,R,inputCustomerData).
+    industrialCustomer.
+    done(inputCustomerData)
+
+  step task_inputCustData_execution_hVal(A,R) :=
+    ready(inputCustomerData).
+    canExecute(A,R,inputCustomerData).
+    not(excludedOwner(A,inputCustomerData)).
+    lowValue
+    =>
+    executed(A,R,inputCustomerData).
+    highValue.
+    done(inputCustomerData)
+
+ 
+  step task_inputCustData_execution_hVal_ind(A,R) :=
+    ready(inputCustomerData).
+    canExecute(A,R,inputCustomerData).
+    not(excludedOwner(A,inputCustomerData)).
+    lowValue.
+    privateCustomer
+    =>
+    executed(A,R,inputCustomerData).
+    industrialCustomer.
+    highValue.
+    done(inputCustomerData)
+
+ 
+  step task_intRating_execution_Pos(A,R) :=
+    ready(internalRating).
+    canExecute(A,R,internalRating).
+    not(excludedOwner(A,internalRating)).
+    intRatingNegative
+    =>
+    executed(A,R,internalRating).
+    intRatingPositive.
+    done(internalRating)
+
+
+    
+  step task_approve_execution_OK(A,R) :=
+    ready(approve).
+    canExecute(A,R,approve).
+    not(excludedOwner(A,approve))
+    =>
+    executed(A,R,approve).
+    productOK.
+    done(approve)
+
+  %% activation of a role
+  step activate(A,R) :=
+    ua(A,R).
+    not(activated(A,R))
+    =>
+    ua(A,R).
+    activated(A,R)
+    
+  %% delegation rules
+  step delegation(A,A1,R,R1,T) :=
+    canDelegate(R,R1,T).
+    ua(A,R).
+    ua(A1,R1)
+    =>
+    delegated(A1,R,T)
+    
+  %% workflow execution
+  step inputCustomerData :=
+    start
+    =>
+    ready(inputCustomerData)
+
+  step prepareContractANDintRating :=
+    done(inputCustomerData)
+    =>
+    ready(prepareContract).
+    ready(internalRating)
+
+  step extRating :=
+    done(internalRating).
+    not(lowrisk)
+    =>
+    ready(externalRating)
+
+  step approve_lowRisk :=
+    lowrisk.
+    done(internalRating).
+    done(prepareContract)
+    =>
+    ready(approve)
+
+  step approve_notlowRisk :=
+    done(externalRating).
+    done(prepareContract)
+    =>
+    ready(approve)
+
+  step sign :=
+    done(approve).
+    productOK
+    =>
+    ready(sign)
+
+    
+section goals:    
+
+  %% (S1) workflow security (ObjSoD)
+  attack_state objssod(A,R,R1,R2) :=
+    executed(A,R,internalRating).
+    executed(A,R1,externalRating).
+    executed(A,R2,approve).
+    done(sign)

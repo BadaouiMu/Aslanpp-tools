@@ -1,0 +1,21 @@
+% TESTED FEATURES: invertible functions
+% EXPECTED OUTCOME: Unsafe
+specification Invertible_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		env: agent;
+		nonpublic token1, token2 : message;
+		my_op(message,message):message;
+        	% note that my_op is intended to be invertible!
+
+	body {
+		iknows(my_op(token1, token2));
+	}
+
+	goals
+		token2_not_revealed : [](!iknows(token1.token2));
+		% note that this should fail because i should invert my_op!
+}

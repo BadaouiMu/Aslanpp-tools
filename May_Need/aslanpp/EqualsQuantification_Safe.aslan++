@@ -1,0 +1,25 @@
+% TESTED FEATURES: equality test, if, implicit quantification
+% EXPECTED OUTCOME: Safe
+specification EqualsQuantification
+channel_model CCM
+
+entity Environment
+{
+  symbols
+    fun  (text): text;
+    fact (text): fact;
+    fact2(text): fact;
+    a: text;
+    X, Z: text;
+  body {
+                          % [variables that occur at least once positively are existentially quantified]
+                          % [variables that occur          only negatively are   universally quantified]
+   fact(fun(a));
+   if( fact (?Z) &   ?Z=fun(?X) ) assert    ok1: true ; else assert wrong1: false; % [exists Z exists X]
+   if( fact (?Z) & !(?Z=fun(?X))) assert wrong2: false; else assert    ok2: true ; % [exists Z forall X]
+   if( fact (?X) &   ?X=fun( a) ) assert    ok3: true ; else assert wrong3: false; % [         exists X]
+   if( fact (?X) & !(?X=fun( a))) assert wrong4: false; else assert    ok4: true ; % [         exists X]
+   if(!fact (?X) &   ?X=fun( a) ) assert wrong5: false; else assert    ok5: true ; % [         exists X]
+   if(!fact2(?X) & !(?X=fun( a))) assert wrong6: false; else assert    ok6: true ; % [         forall X]
+  }
+}

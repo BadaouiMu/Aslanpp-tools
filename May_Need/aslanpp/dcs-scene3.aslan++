@@ -1,0 +1,329 @@
+%% This version : updated 09-09-2010
+%%	There are only three entities : BP, Signer1 and Signer2
+%% 	Only the security property of secrecy of the record archived is put
+%%	Others are commented since they are problems while handling LTL formulas by backends
+
+specification dcsV3 channel_model CCM
+
+%% ////////////////)///////////////////////////////////////////////MASTER ENTITY
+
+entity Environment {
+
+%% ///////////////////////////////////////////////////////////////TYPES 
+types
+  message_names < message;
+  request < message;
+  reply < message;
+  time < message;
+  decision < message;
+  contract < message;
+  policy < message;
+
+%% ///////////////////////////////////////////////////////////////SYMBOLS 
+symbols
+
+  %% Agents 
+  bp,s1,s2 : agent;
+  %% Keys
+  nonpublic k_SS_TS,k_SS_Ar,k_SS_PKI,k_SS_BP,k_BP_S1,k_BP_S2 : symmetric_key; 
+  symmetricKey (agent,agent) : symmetric_key;	  
+  %% Message_names
+  create_record_resp,prepare_signature_resp,
+  	signature_resp,submit_signature_rsp : reply;
+  add_signature_request,submit_signature_request : request;
+  add_contract_req,create_record_request,
+  	signature_request,prepare_signature_request : request;
+  %% Messages
+  hash (message) : message;
+  signature_ok: decision;  
+  %% contract
+  nonpublic contract_without_sigs: contract;
+  %% Facts
+  isFirstSigner (agent) : fact;
+  isSecondSigner (agent) : fact;
+  alreadySign(agent,contract): fact;
+  allSign(contract,agent,agent): fact;
+  created_contract(contract): fact;
+  signature_prepared(agent,contract): fact;
+  ready_to_sign(agent,contract): fact;
+  store_record(message) : fact;
+  seal_record(message) : fact;
+  %% For non-repudiation property
+  witness_non_repudiation(agent,agent,message): fact;
+  request_non_repudiation(agent,agent,message): fact;
+  %% For authentication property
+  witness_auth(agent,agent,message) : fact;
+  request_auth(agent,agent,message) : fact;
+  %% For exec property
+  achieved(agent,contract): fact;
+
+%% ///////////////////////////////////////////////////////////////MACROS
+ macros
+  %% signed (A,M) : the signature of the message M by the agent A
+  signed(Agent,Message) = Message.sign(inv(pk(Agent)),hash(Message));
+
+  %% timestamped (A,T,M) : the message M is timpestamped 
+  %% (hashed and concatenated with T) then signed by A
+  %% signed (Agent,Hash(M).T)
+  timestamped(Agent,Time,Message) = 
+        hash(Message).Time.sign(inv(pk(Agent)),hash(hash(Message).Time));
+
+  %% Other Macros
+  sig_ok(Message,Agent,Key) = signature_ok.Message.Agent.Key;
+  arch_ok(Message,Agent) = sign(inv(pk(Agent)),Message);
+  create_record_req(Contract,S1,K_S1,S2,K_S2) = 
+  		create_record_request.Contract.S1.K_S1.S2.K_S2;
+  create_record_rsp(Contract) = create_record_resp.Contract;
+  prepare_signature_req(S,K_S) = prepare_signature_request.S.K_S;
+  prepare_signature_rsp(S,K_S,SignaturePolicy) = 
+  		prepare_signature_resp.S.K_S.SignaturePolicy;
+  add_signature_req(Message) = add_signature_request.Message;
+  signature_rsp(S1,K_S1,Contract,SignaturePolicy1) = 
+  		signature_resp.S1.K_S1.Contract.SignaturePolicy1;
+  submit_signature_req(Message) = submit_signature_request.Message;
+  signature_req(S,K_S) = signature_request.S.K_S; 
+	
+%% ///////////////////////////////////////////////////////////////ENTITIES
+%% --------------------------------------------- Business Portal
+%% we assume that the BP has already the contract 
+%% what is missing are only signatures of the two signers 
+entity BusinessPortal (Actor,S1,S2: agent,
+	Contract: contract,K_BP_S1,K_BP_S2: symmetric_key,CRL_Copy : 
+(agent,public_key) set) {
+
+  symbols
+      SignaturePolicy1,SignaturePolicy2 : policy;
+      Signed_Msg, Timestamped_Signed_Msg: message;
+      Time: time;
+      Proof_Record,Proof_Record2: message;
+      signaturePolicy1,signaturePolicy2: policy;
+	
+  body {
+
+    while (!(allSign(Contract,S1,S2))){
+
+      select {
+        %% create record
+	%% BP asks SS to create a record concerning a certain contract
+	on (!(created_contract(Contract))) : {
+	%% create the record
+	Proof_Record := Contract;	
+	created_contract(Contract);
+	%%secrecy 
+	secrecy_goal secret_contract: Actor,S1,S2 : Contract;
+	} % 1
+
+    %%-----------------------------------------------First Signer
+    %% receive a signature request ---> prepare the signature 
+    %% request by itself (just add the signature policy of sig1)
+	on (receive (S1,scrypt(K_BP_S1,signature_req(S1,pk(S1)))) & 
+		created_contract(Contract) & isFirstSigner(S1)) :{
+	request_auth(Actor,S1,signature_req(S1,pk(S1)));%% fact for authentication
+	signature_prepared(S1,Contract);
+	send(S1,scrypt(K_BP_S1,signature_rsp(S1,pk(S1),Contract,signaturePolicy1)));
+	witness_auth(Actor,S1,
+		signature_rsp(S1,pk(S1),Contract,SignaturePolicy1));
+		%% above line: fact for authentication
+	witness_non_repudiation(Actor,S1,Contract.S1.pk(S1).SignaturePolicy1);
+	}%2
+
+
+        %% add the signature_request  
+    	on (receive(S1,scrypt(K_BP_S1,
+    	submit_signature_req(signed(S1,Contract.S1.pk(S1).signaturePolicy1)))) 
+	    	& signature_prepared(S1,Contract)) :{
+	request_auth(S1,Actor,
+		signed(S1,Contract.S1.pk(S1).signaturePolicy1));
+		%% above line: fact for authentication
+	request_non_repudiation(Actor,S1,signed(S1,Contract.S1.pk(S1).signaturePolicy1));
+
+	if (!(CRL_Copy->contains((S1,pk(S1)))))
+	{
+	  send(S1,scrypt(K_BP_S1,
+		  sig_ok(timestamped(Actor,Time,
+		  	signed(S1,Contract.S1.pk(S1).signaturePolicy1)),S1,pk(S1))));
+	  %% update the proof record by adding the signature of the first signer
+	  Proof_Record := Contract.signed(S1,Contract.S1.pk(S1).signaturePolicy1);
+	  alreadySign(S1,Contract);
+	}} %3
+
+    %%-----------------------------------------------Second Signer
+        %% receive a signature request ---> prepare the signature request and sends it to SS
+	on (receive (S2,scrypt(K_BP_S2,signature_req(S2,pk(S2)))) & 
+	    created_contract(Contract) & isSecondSigner(S2) & 
+	    	isFirstSigner(S1) & alreadySign(S1,Contract)) : {
+	request_auth(Actor,S2,signature_req(S2,pk(S2)));%% fact for authentication
+	signature_prepared(S2,Contract);
+	send(S2,scrypt(K_BP_S2,signature_rsp(S2,pk(S2),Contract,signaturePolicy2)));
+	witness_auth(Actor,S2,signature_rsp(S1,pk(S2),Contract,SignaturePolicy2));
+	%% above line: fact for authentication
+	witness_non_repudiation(Actor,S2,Contract.S2.pk(S2).SignaturePolicy2);
+	}%4
+
+        %% add the signature_request  
+    	on (receive(S2,scrypt(K_BP_S2,
+    		submit_signature_req(signed(S2,Contract.S2.pk(S2).signaturePolicy2))))
+	    & (signature_prepared(S2,Contract))): {
+	
+	request_auth(S2,Actor,
+		signed(S2,Contract.S2.pk(S2).signaturePolicy2));
+		%%above line: fact for authentication
+	request_non_repudiation(Actor,S2,signed(S2,Contract.S2.pk(S2).signaturePolicy2));
+
+	if (!(CRL_Copy->contains((S2,pk(S2)))))
+	{
+	  send(S2,scrypt(K_BP_S2, 
+		  sig_ok(timestamped(Actor,Time,
+		  	signed(S2,Contract.S2.pk(S2).signaturePolicy2)),S2,pk(S2))));
+	  %% update the proof record by adding the signature of the first signer
+	  Proof_Record2 := Proof_Record.signed(S2,Contract.S2.pk(S2).signaturePolicy2);
+	  allSign(Contract,S1,S2);
+	  %% archive
+	  seal_record(Proof_Record2);
+	  %% secrecy
+	  secrecy_goal secret_archive2: Actor : Proof_Record2;
+	  store_record(Proof_Record2);
+	}}%5
+  }}%End select and While
+  }%End body
+} %% End entity BP
+
+%% --------------------------------------------- Signer 1
+%% the signer does not the contract since its the bp who have wrote it
+%% suppose that S1 has a common key with the BP
+entity Signer1 (Actor, BP: agent,K_BP_S1: symmetric_key) {
+
+  symbols
+      SignaturePolicy1 : policy;
+      Contract: contract;
+      Timestamped_Signed_Msg: message;
+
+  clauses
+      clause_first_signer: isFirstSigner(Actor);
+	
+  body {
+        %% ask for the signature_request  
+	  send(BP,scrypt(K_BP_S1,signature_req(Actor,pk(Actor))));
+	  witness_auth(BP,Actor,signature_req(Actor,pk(Actor)));%% fact for authentication
+	  receive(BP,scrypt(K_BP_S1,
+	  	signature_rsp(Actor,pk(Actor),?Contract,?SignaturePolicy1)));
+	  %% secrecy
+	  secrecy_goal secret_contract: Actor,BP : Contract;
+          ready_to_sign(Actor,Contract);
+	  request_auth(BP,Actor,
+	  	signature_rsp(Actor,pk(Actor),Contract,SignaturePolicy1));
+	  	%% above line: fact for authentication
+
+	%%submit signature
+	  send (BP,scrypt(K_BP_S1,
+	  	submit_signature_req(signed(Actor,Contract.Actor.pk(Actor).SignaturePolicy1))));
+	  witness_auth(Actor,BP,
+	  	signed(Actor,Contract.Actor.pk(Actor).SignaturePolicy1));
+	  		%% above line: fact for authentication
+	%% fact for non repudiation
+	  witness_non_repudiation(Actor,BP,
+	  		signed(Actor,Contract.Actor.pk(Actor).SignaturePolicy1));
+	  receive (BP,scrypt(K_BP_S1,sig_ok(?Timestamped_Signed_Msg,Actor,pk(Actor))));
+
+  }%End body
+} %% End entity S1
+
+%% --------------------------------------------- Signer 2
+%% this signer has to sign after the first one 
+%% suppose that S2 has a common key with the BP
+entity Signer2 (Actor, BP: agent,K_BP_S2: symmetric_key) {
+
+  symbols
+      SignaturePolicy2 : policy;
+      Contract: contract;
+      Timestamped_Signed_Msg: message;
+	
+  clauses
+      clause_second_signer: isSecondSigner(Actor);
+
+  body {	  
+        %% ask for the signature_request  
+	  send(BP,scrypt(K_BP_S2,signature_req(Actor,pk(Actor))));
+	  witness_auth(BP,Actor,signature_req(Actor,pk(Actor)));
+	  %% above line: fact for authentication
+	  receive(BP,scrypt(K_BP_S2,
+	  	signature_rsp(Actor,pk(Actor),?Contract,?SignaturePolicy2)));
+	  %% secrecy of the contract
+	  secrecy_goal secret_contract: Actor,BP : Contract;
+	  ready_to_sign(Actor,Contract);%% for requirement of proof of origin
+	  request_auth(BP,Actor,
+	  	signature_rsp(Actor,pk(Actor),Contract,SignaturePolicy2));
+	  	%% above line: fact for authentication
+
+	%%submit signature
+	  send (BP,scrypt(K_BP_S2,
+	  	submit_signature_req(signed(Actor,Contract.Actor.pk(Actor).SignaturePolicy2))));	
+	  witness_non_repudiation(Actor,BP,signed(Actor,Contract.Actor.pk(Actor).SignaturePolicy2));
+          %% fact for non repudiation
+	  receive (BP,scrypt(K_BP_S2,sig_ok(?Timestamped_Signed_Msg,Actor,pk(Actor))));
+	  achieved(Actor,Contract);
+  }%End body
+} %% End entity S1
+%% ///////////////////////////////////////////////////////////////ENVIRONNEMENT BODY
+
+ body {
+  new BusinessPortal(bp,s1,s2,contract_without_sigs,k_BP_S1,k_BP_S2,{});
+  new Signer1(s1,bp,k_BP_S1);
+  new Signer2(s2,bp,k_BP_S2);
+ }
+
+%% ///////////////////////////////////////////////////////////////GOALS
+goals
+
+%% Property checked: Secrecy
+%% %OK-14-12-2010
+%% Just Omit "goals"
+%% and de-comment all the secrecy goals in the text above
+%% Property checked: Executability
+%% %OK-13-12-2010
+%% to be translated using option "-gas"!
+executability:
+!achieved(s2,contract_without_sigs); 
+%% Property checked: Integrity
+%% %OK-14-12-2010
+integrity: 
+  forall C_orig C_orig1 C_orig2 C_sig1 C_sig2 Signer1 Signer2 SPolicy1 SPolicy2. 
+  [] (((store_record (C_orig.signed (Signer1,C_orig1.Signer1.pk(Signer1).SPolicy1).signed 
+      (Signer2,C_orig2.Signer2.pk(Signer2).SPolicy2))) 
+      & (seal_record (C_orig.signed (Signer1,C_orig1.Signer1.pk(Signer1).SPolicy1).signed 
+      (Signer2,C_orig2.Signer2.pk(Signer2).SPolicy2)))
+      )
+  => ((C_orig1=C_orig) & (C_orig2=C_orig))
+     );
+
+%% Property checked: Proof Of Origin
+%% %OK-14-12-2010
+proof_of_origin:
+  forall S1 S2 Contract. 
+  [] (ready_to_sign(S2,Contract) & isSecondSigner(S2)
+  => (alreadySign(S1,Contract) & isFirstSigner(S1))
+% %=> <->(alreadySign(S1,Contract) & isFirstSigner(S1))
+  );
+
+%% Property checked: non-repudiation
+%% %OK-14-12-2010
+%% OK-non-repudiation
+non_repudiation: 
+  forall S BP Contract. 
+  [](request_non_repudiation(BP,S,signed(S,Contract)) 
+  %=> <-> (
+  =>  (
+  (witness_non_repudiation(S,BP,signed(S,Contract))) 
+  & (witness_non_repudiation(BP,S,Contract))
+  ));
+
+%% Property checked: Authentication
+%% %OK-14-12-2010
+authentication : 
+  forall A B M. 
+  [] (request_auth(A,B,M)
+  => (witness_auth(A,B,M))
+%  %=> <->(witness_auth(A,B,M))
+  );
+
+} %% End entity Environment

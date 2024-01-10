@@ -1,0 +1,25 @@
+specification Subtype_agent_Unsafe
+channel_model CCM
+
+entity Environment {
+
+  types
+    agent0 < agent;
+  symbols
+    a0: agent0;
+
+  entity Agent0(Actor: agent0) 
+  {
+    symbols 
+      A0: agent0;
+      Reached: message;
+    body
+    {
+      A0 := Actor;
+      assert step_reached: false; % should reach this point and yield 'attack'
+    }
+  }
+  body
+    new Agent0(a0);
+}
+

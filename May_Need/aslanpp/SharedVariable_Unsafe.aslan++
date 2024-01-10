@@ -1,0 +1,55 @@
+%Gabi, please make the translator warn about inherited variables.
+%OFMC says: multiple waiting terms in LHS of a rule :-(
+% @verbatim(Modelers should better use parameters instead, as far as possible, e.g. for constant values.)
+% @verbatim(If a modifiable shared variable is needed, the technique given below may be used.)
+% Maybe later implemented by the translator?
+% @clatse(--nb 2)
+% @ofmc(NO)
+
+specification SharedVariable_Unsafe
+channel_model CCM 
+
+
+entity Environment {
+
+  entity Session (A, B: agent) {
+
+    symbols
+      SharedVar1: nat;
+      SharedVar2Id: protocol_id;
+      shared(protocol_id, message): fact;
+
+    entity Alice (Actor, B: agent, SharedVar2Id: protocol_id) {
+                  % note that Alice and Bob does not inherit SharedVar2Id,
+                  % but gets a copy of of the reference to SharedVar2 as parameter
+
+      body {
+        SharedVar1 := 2; % this refers to the inherited shared variable - does not work for OFMC!
+	retract shared(SharedVar2Id, ?);
+	shared(SharedVar2Id, 2);
+        Actor *->  B: i; % just an authentic signal to B
+      }
+    }
+
+    entity Bob (A,Actor: agent, SharedVar2Id: protocol_id) {
+
+      body {
+        A *-> Actor: i;
+        assert test_shared_var2_equals_a: shared(SharedVar2Id, 1);
+       %should report violation because now "shared(SharedVar2Id, 2)" holds
+      }
+    }
+
+    body {
+      SharedVar1 := 1;
+      SharedVar2Id := fresh(); 
+      shared(SharedVar2Id, 1); 
+      new Alice(A,B,SharedVar2Id);
+      new Bob  (A,B,SharedVar2Id);
+    }
+  }
+
+  body
+    any A B. Session(A,B) where A!=B;
+}
+

@@ -1,0 +1,34 @@
+% TESTED FEATURES: equality check, variable assignment
+% EXPECTED OUTCOME: Unsafe
+specification EqualsFnc_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		mysign(agent, message) : message;
+		token : message;
+		recorded(agent, message) : fact;
+		mike : agent;
+		
+	entity Citizen(Actor : agent)
+	{
+		symbols
+			M, B : message;
+			A : agent;	
+	
+		body {
+			M := mysign(Actor, token);
+			if (M = mysign(?A, ?B))
+				recorded(A, B);
+		}
+	}
+
+	body
+	{
+		new Citizen(mike);
+	}
+
+	goals
+		g : [](!exists A B . recorded(A, B));
+}

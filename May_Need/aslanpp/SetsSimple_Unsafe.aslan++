@@ -1,0 +1,20 @@
+% TESTED FEATURES: sets
+% EXPECTED OUTCOME: Unsafe
+specification SetsSimple_Unsafe
+channel_model CCM
+
+entity Simple
+{
+	symbols
+		Db : message set;
+		tok : message;
+
+	body
+	{
+		Db := {};
+		add(Db, tok);
+	}
+
+	goals
+		never_added : [](forall D . !contains(D, tok));
+}

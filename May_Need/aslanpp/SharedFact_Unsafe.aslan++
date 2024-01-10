@@ -1,0 +1,56 @@
+% @verbatim(Modifiable shared variable implemented via facts)
+
+specification SharedFact_Unsafe
+channel_model CCM 
+
+entity Environment {
+  symbols
+    succ(nat): nat;
+
+  entity Session (A, B: agent) {
+
+    symbols
+      shared(protocol_id, nat): fact;
+      SharedVarId: protocol_id;
+
+    entity Alice (Actor, B: agent, SharedVarId: protocol_id) {
+    % Alice and Bob does not inherit SharedVarId, but
+    % get a copy of the reference to SharedVar as parameter
+
+      symbols
+        ValueOfSharedVar: nat;
+      body {
+      % read and remove the old value and set a new value:
+        select {
+          on(shared(SharedVarId, ?ValueOfSharedVar)): {
+             retract (shared(SharedVarId, ValueOfSharedVar));
+             shared(SharedVarId, succ(ValueOfSharedVar));
+          }
+        }
+        Actor *->  B: i;                       % handover to B
+      }
+    }
+
+    entity Bob (A,Actor: agent, SharedVarId: protocol_id) {
+
+      body {
+        A *-> Actor: i;                      % handover from A
+        assert test_SharedVar_still_1: shared(SharedVarId, 1);
+                                     % reads the current value
+                         % should report violation because now
+                        % "shared(SharedVarId, succ(1))" holds
+      }
+    }
+
+    body {
+      SharedVarId := fresh(); 
+      shared(SharedVarId, 1); % sets the initial value
+      new Alice(A,B,SharedVarId);
+      new Bob  (A,B,SharedVarId);
+    }
+  }
+
+  body
+    any A B. Session(A,B) where A!=B & !dishonest(A);
+}
+

@@ -1,0 +1,31 @@
+% TESTED FEATURES: channel goals after guards
+% EXPECTED OUTCOME: Unsafe
+specification ChannelGoalsAfterGuards
+channel_model CCM
+
+entity Env
+{
+  symbols
+    accepted(message) : fact;
+    alice, bob : agent;
+
+  entity Bob(Actor, A : agent)
+  {
+    symbols
+      M : message;
+
+    body {
+      select {
+        on (? *-> Actor : ?M) :
+          channel_goal m_secret : A *-> Actor : M;
+        {
+          accepted(M);
+        }
+      }
+    }
+  }
+
+  body {
+    new Bob(bob, alice);
+  }
+}

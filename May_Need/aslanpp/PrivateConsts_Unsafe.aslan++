@@ -1,0 +1,29 @@
+% TESTED FEATURES: private constants
+% EXPECTED OUTCOME: Unsafe
+specification PrivateConsts_Unsafe
+channel_model CCM
+
+entity Env
+{
+	symbols
+		bob : agent;
+		token : message;	
+		knows(agent, message) : fact;
+
+	entity Bob(Actor : agent) {
+	       symbols
+		   M : message;
+
+	       body {
+	       	    ? ->* Actor : ?M;
+		    knows(Actor, M);
+	       }
+	}
+		
+	body {
+	     new Bob(bob);
+	}
+
+	goals
+	     unknown : [](!knows(bob, token));
+}
